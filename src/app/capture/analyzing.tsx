@@ -54,8 +54,17 @@ export default function AnalyzingScreen() {
         },
         onError: (err: any) => {
           console.error('[analyzing] vision API error:', err);
-          // NEVER show raw error message to user — log to console only
-          setError('Analysis failed — please try again');
+          const status = err?.status as number | undefined;
+          const msg = typeof err?.message === 'string' ? err.message : '';
+          if (status === 401 || /No signed-in user|Not signed in|token/i.test(msg)) {
+            setError('Please sign in again to analyze meals');
+          } else if (status === 429 || /cap_exceeded|rate limit/i.test(msg)) {
+            setError('Too many requests today — try again later');
+          } else if (status === 413 || /too large|payload/i.test(msg)) {
+            setError('Photo too large — try a smaller image');
+          } else {
+            setError('Analysis failed — please try again');
+          }
         },
       }
     );
