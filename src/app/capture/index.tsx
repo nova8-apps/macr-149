@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Pressable, Platform, StyleSheet } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { Text } from '@/components/ui/text';
 import { ArrowLeft, Camera, Image as ImageIcon, CheckCircle, PenLine, RotateCcw, Zap, ZapOff } from 'lucide-react-native';
@@ -21,19 +22,9 @@ export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<'off' | 'on'>('off');
-  const [isFocused, setIsFocused] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const cameraRef = useRef<CameraView>(null);
-
-  // Only mount camera when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      setIsFocused(true);
-      return () => {
-        setIsFocused(false);
-      };
-    }, [])
-  );
+  const isFocused = useIsFocused();
 
   const handleCapture = async () => {
     if (isCapturing) return;
