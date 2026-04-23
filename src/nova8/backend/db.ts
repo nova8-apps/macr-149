@@ -160,7 +160,7 @@ export async function create(
   return request<DocResult>(
     "POST",
     `/db/collections/${encodeURIComponent(collection)}/docs`,
-    { data, ...(id !== undefined ? { id } : {}) },
+    { data, ...(id !== undefined ? { docId: id } : {}) },
   );
 }
 
