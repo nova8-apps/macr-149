@@ -1,36 +1,26 @@
-// Macr — React Query hooks for all API endpoints
+// src/lib/api-hooks.ts — Wave 3h migration to @nova8/backend
+// ─────────────────────────────────────────────────────────────────
+// All data lives in per-user Firestore collections under the signed-in
+// user. OpenAI vision goes through the Nova8 proxy (server-side secret
+// key). There are NO custom backend endpoints for this app — Nova8's
+// generic /api/app/:id/* surface is the entire backend.
+//
+// Collections:
+//   profile   : single doc id="main" holding goals, streak, entitlement.
+//   weight    : [{ weightKg, loggedAt }] one doc per log.
+//   meals     : [{ name, totalCalories, proteinG, carbsG, fatG, items, loggedDate, loggedAt }]
+//   exercises : [{ name, caloriesBurned, durationMin, loggedDate, loggedAt }]
+//
+// Aggregations (stats/summary, analytics/trends) are computed client-side
+// from the collections above. Food search is a curated static list for
+// now (USDA requires a server endpoint we don't have yet).
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from './apiClient';
-import type { User, UserGoals, Meal, MealItem, Exercise, WeightLog, Streak, Entitlement, FoodItem, DaySummary } from '@/types';
+import { auth, db, openai } from '@/nova8/backend';
 
-// ─── Types ────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────
 
-interface MeResponse {
-  user: User;
-  goals: UserGoals | null;
-  streak: Streak;
-  entitlement: Entitlement;
-}
-
-interface AuthResponse {
-  token: string;
-  user: User;
-  goals?: UserGoals | null;
-  streak?: Streak;
-  entitlement?: Entitlement;
-}
-
-interface MealWithItems extends Meal {
-  userId?: string;
-}
-
-interface StatsSummary extends DaySummary {
-  caloriesBurned: number;
-  streak: Streak;
-}
-
-interface VisionMealResult {
+export interface VisionMealResult {
   meal: {
     name: string;
     totalCalories: number;
@@ -47,177 +37,96 @@ interface VisionMealResult {
       unit: string;
     }>;
   };
+  aiConfidence?: 'high' | 'low';
 }
 
-interface VisionLabelResult {
+export interface VisionLabelResult {
   servingSize: string;
   caloriesPerServing: number;
   proteinG: number;
   carbsG: number;
   fatG: number;
   sodiumMg: number;
+  aiConfidence?: 'high' | 'low';
 }
 
-// ─── Auth (not hooks — called directly) ───────────────
+const PROFILE_ID = 'main';
 
-import { setAppToken } from './apiClient';
-
-export async function loginApi(email: string, password: string): Promise<AuthResponse> {
-  const response = await apiClient<AuthResponse>('/api/app/149/auth/signin', {
-    method: 'POST',
-    body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-    skipAuth: true,
-  });
-  // Store the token in AsyncStorage so API calls work on app restart
-  await setAppToken(response.token);
-  return response;
+function today(): string {
+  return new Date().toISOString().split('T')[0];
 }
 
-export async function signupApi(email: string, password: string, name?: string): Promise<AuthResponse> {
-  const response = await apiClient<AuthResponse>('/api/app/149/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify({ email: email.trim().toLowerCase(), password, name }),
-    skipAuth: true,
-  });
-  // Store the token in AsyncStorage so API calls work on app restart
-  await setAppToken(response.token);
-  return response;
+async function ensureProfile(): Promise<{ goals?: any; streak?: any; entitlement?: any }> {
+  const existing = await db.get('profile', PROFILE_ID);
+  if (existing) return (existing.data as any) || {};
+  const created = await db.create('profile', {}, PROFILE_ID);
+  return (created.data as any) || {};
 }
 
-export async function logoutApi(): Promise<void> {
-  await apiClient('/api/app/149/auth/logout', { method: 'POST' });
-  // Clear the token from AsyncStorage
-  await setAppToken(null);
+// ─── Auth ────────────────────────────────────────────────
+
+export function loginApi(email: string, password: string) {
+  return auth.signInWithEmail(email, password);
 }
 
-// ─── User / Me ────────────────────────────────────────
+export function signupApi(email: string, password: string, name?: string) {
+  return auth.signUpWithEmail(email, password, name);
+}
 
 export function useMe() {
-  return useQuery<MeResponse>({
+  return useQuery({
     queryKey: ['me'],
-    queryFn: () => apiClient<MeResponse>('/api/app/149/auth/me'),
+    queryFn: async () => {
+      const user = auth.currentUser();
+      if (!user) throw new Error('Not signed in');
+      const profile = await ensureProfile();
+      return {
+        user: { id: user.id, email: user.email, name: user.name },
+        goals: profile.goals || null,
+        streak: profile.streak || null,
+        entitlement: profile.entitlement || { isPro: false },
+      };
+    },
     staleTime: 5 * 60 * 1000,
-    retry: 1,
   });
 }
 
-// ─── Goals ────────────────────────────────────────────
+// ─── Goals ───────────────────────────────────────────────
 
 export function useGoalsMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (goals: Partial<UserGoals> & Record<string, unknown>) =>
-      apiClient('/api/user/goals', {
-        method: 'POST',
-        body: JSON.stringify(goals),
-      }),
+    mutationFn: async (goals: any) => {
+      await ensureProfile();
+      return db.update('profile', PROFILE_ID, { goals });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['me'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
     },
   });
 }
 
-// ─── Meals ────────────────────────────────────────────
+// ─── Weight ──────────────────────────────────────────────
 
-export function useMealsByDate(date: string) {
-  return useQuery<MealWithItems[]>({
-    queryKey: ['meals', date],
-    queryFn: () => apiClient<MealWithItems[]>(`/api/meals?date=${date}`),
-    staleTime: 30 * 1000,
-  });
-}
-
-export function useCreateMeal() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (meal: {
-      name: string;
-      photoUrl?: string;
-      totalCalories: number;
-      proteinG: number;
-      carbsG: number;
-      fatG: number;
-      items: Array<{
-        name: string;
-        calories: number;
-        proteinG: number;
-        carbsG: number;
-        fatG: number;
-        quantity: number;
-        unit: string;
-      }>;
-      eatenAt: string;
-    }) => apiClient<MealWithItems>('/api/meals', {
-      method: 'POST',
-      body: JSON.stringify(meal),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
-      queryClient.invalidateQueries({ queryKey: ['me'] });
+export function useWeightLogs() {
+  return useQuery({
+    queryKey: ['weight'],
+    queryFn: async () => {
+      const docs = await db.list('weight', { limit: 200 });
+      // Newest first.
+      const logs = docs
+        .map((d) => ({ id: d.id, ...(d.data as any) }))
+        .sort((a: any, b: any) => (b.loggedAt || 0) - (a.loggedAt || 0));
+      return { logs };
     },
-  });
-}
-
-export function useDeleteMeal() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (mealId: string) => apiClient(`/api/meals/${mealId}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
-    },
-  });
-}
-
-// ─── Exercises ────────────────────────────────────────
-
-export function useExercisesByDate(date: string) {
-  return useQuery<Exercise[]>({
-    queryKey: ['exercises', date],
-    queryFn: () => apiClient<Exercise[]>(`/api/exercises?date=${date}`),
-    staleTime: 30 * 1000,
-  });
-}
-
-export function useCreateExercise() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (exercise: {
-      type: string;
-      intensity: string;
-      durationMin: number;
-      caloriesBurned: number;
-      loggedAt: string;
-    }) => apiClient<Exercise>('/api/exercises', {
-      method: 'POST',
-      body: JSON.stringify(exercise),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['exercises'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
-    },
-  });
-}
-
-// ─── Weight ───────────────────────────────────────────
-
-export function useWeightLogs(range: 'week' | 'month' | '3m' = 'month') {
-  return useQuery<WeightLog[]>({
-    queryKey: ['weight', range],
-    queryFn: () => apiClient<WeightLog[]>(`/api/weight?range=${range}`),
-    staleTime: 60 * 1000,
   });
 }
 
 export function useLogWeight() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (weightKg: number) => apiClient('/api/weight', {
-      method: 'POST',
-      body: JSON.stringify({ weightKg }),
-    }),
+    mutationFn: (data: { weightKg: number; loggedAt?: number }) =>
+      db.create('weight', { weightKg: data.weightKg, loggedAt: data.loggedAt ?? Date.now() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weight'] });
       queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -225,87 +134,274 @@ export function useLogWeight() {
   });
 }
 
-// ─── Stats ────────────────────────────────────────────
+// ─── Meals ───────────────────────────────────────────────
 
-export function useStatsSummary(date: string) {
-  return useQuery<StatsSummary>({
-    queryKey: ['stats', date],
-    queryFn: () => apiClient<StatsSummary>(`/api/stats/summary?date=${date}`),
-    staleTime: 30 * 1000,
+export function useMealsByDate(date: string) {
+  return useQuery({
+    queryKey: ['meals', date],
+    queryFn: async () => {
+      const docs = await db.query('meals', 'loggedDate', '==', date, { limit: 100 });
+      return docs.map((d) => ({ id: d.id, ...(d.data as any) }));
+    },
   });
 }
 
-interface AnalyticsTrends {
-  trends: Array<{
-    date: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    burned: number;
-    mealCount: number;
-  }>;
-  averages: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    burned: number;
-    meals: number;
-  };
-  daysOnTrack: number;
-  totalDays: number;
-  goals: {
-    dailyCalories: number;
-    proteinG: number;
-    carbsG: number;
-    fatG: number;
-  };
-}
-
-export function useAnalyticsTrends(range: 'week' | 'month' | '3m' = 'week') {
-  return useQuery<AnalyticsTrends>({
-    queryKey: ['analytics', range],
-    queryFn: () => apiClient<AnalyticsTrends>(`/api/analytics/trends?range=${range}`),
-    staleTime: 60 * 1000,
+export function useCreateMeal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (meal: any) =>
+      db.create('meals', {
+        ...meal,
+        loggedDate: meal.loggedDate || today(),
+        loggedAt: meal.loggedAt ?? Date.now(),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meals'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    },
   });
 }
 
-// ─── Foods ────────────────────────────────────────────
+export function useDeleteMeal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => db.remove('meals', id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meals'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    },
+  });
+}
+
+// ─── Exercises ───────────────────────────────────────────
+
+export function useCreateExercise() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (exercise: any) =>
+      db.create('exercises', {
+        ...exercise,
+        loggedDate: exercise.loggedDate || today(),
+        loggedAt: exercise.loggedAt ?? Date.now(),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    },
+  });
+}
+
+// ─── Stats (computed client-side) ────────────────────────
+
+export function useStatsSummary(date?: string) {
+  const d = date || today();
+  return useQuery({
+    queryKey: ['stats', 'summary', d],
+    queryFn: async () => {
+      const [meals, exercises] = await Promise.all([
+        db.query('meals', 'loggedDate', '==', d, { limit: 100 }),
+        db.query('exercises', 'loggedDate', '==', d, { limit: 100 }),
+      ]);
+      let caloriesConsumed = 0, proteinConsumed = 0, carbsConsumed = 0, fatConsumed = 0;
+      for (const doc of meals) {
+        const m = doc.data as any;
+        caloriesConsumed += Number(m.totalCalories) || 0;
+        proteinConsumed += Number(m.proteinG) || 0;
+        carbsConsumed += Number(m.carbsG) || 0;
+        fatConsumed += Number(m.fatG) || 0;
+      }
+      let caloriesBurned = 0;
+      for (const doc of exercises) {
+        caloriesBurned += Number((doc.data as any).caloriesBurned) || 0;
+      }
+      return { caloriesConsumed, proteinConsumed, carbsConsumed, fatConsumed, caloriesBurned };
+    },
+  });
+}
+
+export function useAnalyticsTrends(range: 'week' | 'month' | '3months' = 'week') {
+  return useQuery({
+    queryKey: ['analytics', 'trends', range],
+    queryFn: async () => {
+      const days = range === 'week' ? 7 : range === 'month' ? 30 : 90;
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - (days - 1));
+      const startStr = start.toISOString().split('T')[0];
+      // Fetch all meals/exercises from the window.
+      const [allMeals, allExercises] = await Promise.all([
+        db.query('meals', 'loggedDate', '>=', startStr, { limit: 500, orderBy: 'loggedDate', orderDir: 'asc' }),
+        db.query('exercises', 'loggedDate', '>=', startStr, { limit: 500, orderBy: 'loggedDate', orderDir: 'asc' }),
+      ]);
+      const profile = await ensureProfile();
+      const goals = profile.goals || null;
+      // Group by day.
+      const byDay: Record<string, any> = {};
+      for (let i = 0; i < days; i++) {
+        const day = new Date(start);
+        day.setDate(start.getDate() + i);
+        const key = day.toISOString().split('T')[0];
+        byDay[key] = { date: key, caloriesConsumed: 0, proteinConsumed: 0, carbsConsumed: 0, fatConsumed: 0, caloriesBurned: 0 };
+      }
+      for (const doc of allMeals) {
+        const m = doc.data as any;
+        const key = m.loggedDate;
+        if (!byDay[key]) continue;
+        byDay[key].caloriesConsumed += Number(m.totalCalories) || 0;
+        byDay[key].proteinConsumed += Number(m.proteinG) || 0;
+        byDay[key].carbsConsumed += Number(m.carbsG) || 0;
+        byDay[key].fatConsumed += Number(m.fatG) || 0;
+      }
+      for (const doc of allExercises) {
+        const e = doc.data as any;
+        const key = e.loggedDate;
+        if (!byDay[key]) continue;
+        byDay[key].caloriesBurned += Number(e.caloriesBurned) || 0;
+      }
+      const trends = Object.values(byDay);
+      const avg = (field: string) =>
+        trends.reduce((s: number, t: any) => s + (t[field] || 0), 0) / (trends.length || 1);
+      const averages = {
+        caloriesConsumed: avg('caloriesConsumed'),
+        proteinConsumed: avg('proteinConsumed'),
+        carbsConsumed: avg('carbsConsumed'),
+        fatConsumed: avg('fatConsumed'),
+        caloriesBurned: avg('caloriesBurned'),
+      };
+      const calorieTarget = goals?.calorieTarget ?? 2000;
+      const daysOnTrack = trends.filter(
+        (t: any) => Math.abs(t.caloriesConsumed - calorieTarget) <= calorieTarget * 0.1
+      ).length;
+      return { trends, averages, daysOnTrack, totalDays: trends.length, goals };
+    },
+  });
+}
+
+// ─── Food search (static curated list) ───────────────────
+// USDA / Nutritionix search needs a server endpoint. Until that ships
+// we return a small curated set so the search box is still useful.
+const STATIC_FOODS = [
+  { id: 'chicken-breast', name: 'Chicken breast (100g)', caloriesPerServing: 165, proteinG: 31, carbsG: 0, fatG: 3.6, servingSize: '100g' },
+  { id: 'white-rice', name: 'White rice (1 cup cooked)', caloriesPerServing: 205, proteinG: 4.3, carbsG: 45, fatG: 0.4, servingSize: '1 cup' },
+  { id: 'broccoli', name: 'Broccoli (1 cup)', caloriesPerServing: 55, proteinG: 3.7, carbsG: 11, fatG: 0.6, servingSize: '1 cup' },
+  { id: 'greek-yogurt', name: 'Greek yogurt, plain (170g)', caloriesPerServing: 100, proteinG: 17, carbsG: 6, fatG: 0.4, servingSize: '170g' },
+  { id: 'banana', name: 'Banana (1 medium)', caloriesPerServing: 105, proteinG: 1.3, carbsG: 27, fatG: 0.4, servingSize: '1 medium' },
+  { id: 'egg', name: 'Egg, whole (1 large)', caloriesPerServing: 72, proteinG: 6.3, carbsG: 0.4, fatG: 4.8, servingSize: '1 large' },
+  { id: 'oats', name: 'Oats, dry (1/2 cup)', caloriesPerServing: 150, proteinG: 5, carbsG: 27, fatG: 3, servingSize: '1/2 cup' },
+  { id: 'almonds', name: 'Almonds (1 oz)', caloriesPerServing: 164, proteinG: 6, carbsG: 6, fatG: 14, servingSize: '1 oz' },
+  { id: 'salmon', name: 'Salmon (100g)', caloriesPerServing: 208, proteinG: 20, carbsG: 0, fatG: 13, servingSize: '100g' },
+  { id: 'olive-oil', name: 'Olive oil (1 tbsp)', caloriesPerServing: 119, proteinG: 0, carbsG: 0, fatG: 13.5, servingSize: '1 tbsp' },
+  { id: 'sweet-potato', name: 'Sweet potato, baked (1 medium)', caloriesPerServing: 103, proteinG: 2.3, carbsG: 24, fatG: 0.2, servingSize: '1 medium' },
+  { id: 'peanut-butter', name: 'Peanut butter (2 tbsp)', caloriesPerServing: 188, proteinG: 8, carbsG: 6, fatG: 16, servingSize: '2 tbsp' },
+];
 
 export function useFoodSearch(query: string) {
-  return useQuery<FoodItem[]>({
-    queryKey: ['foods', query],
-    queryFn: () => apiClient<FoodItem[]>(`/api/foods/search?q=${encodeURIComponent(query)}`),
-    enabled: true, // always fetch, empty query returns all
-    staleTime: 5 * 60 * 1000,
+  return useQuery({
+    queryKey: ['foods', 'search', query],
+    queryFn: async () => {
+      const q = query.trim().toLowerCase();
+      if (!q) return { foods: [] };
+      const foods = STATIC_FOODS.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 10);
+      return { foods };
+    },
+    enabled: query.trim().length > 0,
   });
 }
 
-// ─── Vision ───────────────────────────────────────────
-
-export function useVisionAnalyze() {
-  return useMutation({
-    mutationFn: ({ imageBase64, mode }: { imageBase64: string; mode?: 'food' | 'label' }) =>
-      apiClient<VisionMealResult | VisionLabelResult>('/api/vision/analyze', {
-        method: 'POST',
-        body: JSON.stringify({ imageBase64, mode: mode || 'food' }),
-      }),
-  });
-}
-
-// ─── Entitlement ──────────────────────────────────────
+// ─── Entitlement (stored on profile doc) ─────────────────
 
 export function useEntitlementMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { isPro: boolean; productId?: string; expiresAt?: string }) =>
-      apiClient('/api/user/entitlement', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
+    mutationFn: async (data: { isPro: boolean }) => {
+      await ensureProfile();
+      return db.update('profile', PROFILE_ID, {
+        entitlement: { isPro: data.isPro, updatedAt: Date.now() },
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+}
+
+// ─── Vision (OpenAI via Nova8 proxy) ─────────────────────
+
+const VISION_MEAL_PROMPT = `You are a nutrition analyzer. The user sends a photo of a meal. Respond with STRICT JSON matching this schema, no prose, no markdown:
+
+{
+  "meal": {
+    "name": "short meal name",
+    "totalCalories": number,
+    "proteinG": number,
+    "carbsG": number,
+    "fatG": number,
+    "items": [
+      { "name": "string", "calories": number, "proteinG": number, "carbsG": number, "fatG": number, "quantity": number, "unit": "g|ml|oz|cup|serving" }
+    ]
+  },
+  "aiConfidence": "high" | "low"
+}
+
+If the image is not a meal, return { "meal": { "name": "Unknown", "totalCalories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "items": [] }, "aiConfidence": "low" }.`;
+
+const VISION_LABEL_PROMPT = `You are a nutrition-label reader. The user sends a photo of a nutrition-facts label. Respond with STRICT JSON matching this schema, no prose, no markdown:
+
+{
+  "servingSize": "string (e.g. 1 cup (240g))",
+  "caloriesPerServing": number,
+  "proteinG": number,
+  "carbsG": number,
+  "fatG": number,
+  "sodiumMg": number,
+  "aiConfidence": "high" | "low"
+}
+
+If the image is not a nutrition label, return { "servingSize": "unknown", "caloriesPerServing": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "sodiumMg": 0, "aiConfidence": "low" }.`;
+
+function extractJson(text: string): any {
+  // Try straight JSON first, then greedy-match the largest {...} block.
+  try { return JSON.parse(text); } catch {}
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch {}
+  }
+  throw new Error('Vision response was not valid JSON');
+}
+
+export function useVisionAnalyze() {
+  return useMutation({
+    mutationFn: async ({
+      imageBase64,
+      mode,
+    }: {
+      imageBase64: string;
+      mode?: 'food' | 'label';
+    }): Promise<VisionMealResult | VisionLabelResult> => {
+      const prompt = mode === 'label' ? VISION_LABEL_PROMPT : VISION_MEAL_PROMPT;
+      // Accept both raw base64 and data-URL inputs.
+      const dataUrl = imageBase64.startsWith('data:')
+        ? imageBase64
+        : `data:image/jpeg;base64,${imageBase64}`;
+      const res = await openai.chat({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: prompt },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Analyze this image.' },
+              { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } },
+            ],
+          },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
+        max_tokens: 800,
+      });
+      const text = res.choices?.[0]?.message?.content || '';
+      const parsed = extractJson(typeof text === 'string' ? text : '');
+      return parsed as VisionMealResult | VisionLabelResult;
     },
   });
 }

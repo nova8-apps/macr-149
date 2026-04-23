@@ -70,7 +70,7 @@ export default function SettingsScreen() {
   const handleLogWeight = () => {
     const w = parseFloat(weightInput);
     if (w > 0) {
-      logWeightMutation.mutate(w);
+      logWeightMutation.mutate({ weightKg: w });
       setShowWeightInput(false);
       hapticLight();
     }

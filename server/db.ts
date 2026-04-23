@@ -66,12 +66,14 @@ const SCHEMA_SQL = `
 -- ── auth ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
   id              TEXT PRIMARY KEY,
-  email           TEXT NOT NULL UNIQUE COLLATE NOCASE,
-  password_hash   TEXT NOT NULL,
+  email           TEXT UNIQUE COLLATE NOCASE,
+  password_hash   TEXT,
   name            TEXT,
+  apple_id        TEXT UNIQUE,
   created_at      INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id);
 
 -- Persisted session tokens — survive server restart.
 CREATE TABLE IF NOT EXISTS sessions (
@@ -176,6 +178,26 @@ CREATE INDEX IF NOT EXISTS idx_foods_name ON foods(name);
 `;
 
 db.exec(SCHEMA_SQL);
+
+// ─── Migrations ─────────────────────────────────────────────────────────────
+// Add apple_id column if it doesn't exist (migration for existing databases)
+try {
+  const userTableInfo = db.pragma('table_info(users)') as any[];
+  const hasAppleId = userTableInfo.some((col: any) => col.name === 'apple_id');
+  if (!hasAppleId) {
+    console.log('[db] adding apple_id column to users table');
+    db.prepare('ALTER TABLE users ADD COLUMN apple_id TEXT').run();
+    db.prepare('CREATE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id)').run();
+  }
+
+  // Note: SQLite doesn't support ALTER TABLE ... ALTER COLUMN, so we can't change
+  // existing NOT NULL constraints without recreating the table. Since we generate
+  // placeholder values for Apple users (dummy email + password hash), the existing
+  // schema works fine. For truly fresh databases, the CREATE TABLE IF NOT EXISTS
+  // above already has nullable email/password_hash.
+} catch (err: any) {
+  console.warn('[db] migration warning:', err?.message || err);
+}
 
 /** Current epoch-ms. Use this anywhere you store a timestamp. */
 export function now(): number {

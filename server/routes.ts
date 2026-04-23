@@ -10,6 +10,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import OpenAI from 'openai';
+import appleSignin from 'apple-signin-auth';
 import { db, now } from './db';
 import {
   AuthedRequest,
@@ -22,6 +23,7 @@ import {
   destroySession,
   getUserByEmail,
   getUserById,
+  getUserByAppleId,
 } from './auth';
 
 const router = Router();
@@ -135,6 +137,92 @@ router.get('/auth/me', requireAuth, (req: AuthedRequest, res: Response) => {
   const streak = db.prepare('SELECT * FROM streaks WHERE user_id = ?').get(req.userId!) || null;
   const entitlement = db.prepare('SELECT * FROM entitlements WHERE user_id = ?').get(req.userId!) || null;
   return res.json({ user, goals, streak, entitlement });
+});
+
+// ── Apple Sign In ─────────────────────────────────────────────────────────
+router.post('/auth/apple', async (req: Request, res: Response) => {
+  try {
+    const { identityToken, appleUserId, email, fullName } = req.body || {};
+
+    if (!identityToken || !appleUserId) {
+      return res.status(400).json({ error: 'identityToken and appleUserId required' });
+    }
+
+    // Verify the Apple identity token against Apple's JWKS endpoint
+    let appleData: any;
+    try {
+      appleData = await appleSignin.verifyIdToken(identityToken, {
+        audience: '', // Empty string = accept any audience (we're not a web service)
+        ignoreExpiration: false,
+      });
+    } catch (err: any) {
+      console.error('[auth/apple] token verification failed:', err?.message || err);
+      return res.status(401).json({ error: 'Invalid Apple identity token' });
+    }
+
+    const appleSub = appleData.sub; // Stable Apple user ID
+    const appleEmail = appleData.email || email || null; // Email may be null on subsequent logins
+
+    // Look up user by apple_id first, fall back to email only if apple_id produces no match
+    let user = getUserByAppleId(appleSub);
+
+    if (!user && appleEmail) {
+      // First-time Apple sign in with email — check if user exists by email
+      const existingUser = getUserByEmail(appleEmail);
+      if (existingUser) {
+        // Link Apple ID to existing account
+        db.prepare('UPDATE users SET apple_id = ? WHERE id = ?').run(appleSub, existingUser.id);
+        user = getUserById(existingUser.id);
+      }
+    }
+
+    if (!user) {
+      // Create new user
+      const id = newUserId();
+      const ts = now();
+      const name = fullName?.givenName && fullName?.familyName
+        ? `${fullName.givenName} ${fullName.familyName}`.trim()
+        : fullName?.givenName || fullName?.familyName || null;
+
+      // Generate a random password hash (user won't use it, but column is NOT NULL)
+      const dummyPasswordHash = hashPassword(crypto.randomBytes(32).toString('hex'));
+
+      // Insert user + default rows in a single transaction
+      const tx = db.transaction(() => {
+        db.prepare(
+          'INSERT INTO users (id, email, password_hash, name, apple_id, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run(id, appleEmail || `apple-${appleSub}@placeholder.local`, dummyPasswordHash, name, appleSub, ts);
+
+        db.prepare(
+          `INSERT INTO user_goals (user_id, updated_at) VALUES (?, ?)`,
+        ).run(id, ts);
+
+        db.prepare(
+          `INSERT INTO streaks (user_id) VALUES (?)`,
+        ).run(id);
+
+        db.prepare(
+          `INSERT INTO entitlements (user_id, updated_at) VALUES (?, ?)`,
+        ).run(id, ts);
+      });
+      tx();
+
+      user = getUserById(id)!;
+    }
+
+    // Create session and return token + user
+    const token = createSession(user.id);
+
+    // Include goals, streak, and entitlement so the client can determine if onboarding is complete
+    const goals = db.prepare('SELECT * FROM user_goals WHERE user_id = ?').get(user.id) || null;
+    const streak = db.prepare('SELECT * FROM streaks WHERE user_id = ?').get(user.id) || null;
+    const entitlement = db.prepare('SELECT * FROM entitlements WHERE user_id = ?').get(user.id) || null;
+
+    return res.json({ token, user, goals, streak, entitlement });
+  } catch (err: any) {
+    console.error('[auth/apple] error:', err?.message || err, err?.stack || '');
+    return res.status(500).json({ error: 'Internal server error', detail: String(err?.message || err) });
+  }
 });
 
 // ── User goals ────────────────────────────────────────────────────────────

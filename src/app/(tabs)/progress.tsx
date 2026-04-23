@@ -70,16 +70,16 @@ function SimpleLineChart({ data, color }: { data: { label: string; value: number
 export default function ProgressScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('Week');
   const { data: meData } = useMe();
-  const weightRange = activeTab === 'Week' ? 'week' as const : activeTab === 'Month' ? 'month' as const : '3m' as const;
-  const { data: weightLogsData } = useWeightLogs(weightRange);
-  const analyticsRange = activeTab === 'Week' ? 'week' as const : activeTab === 'Month' ? 'month' as const : '3m' as const;
+  const weightRange = activeTab === 'Week' ? 'week' as const : activeTab === 'Month' ? 'month' as const : '3months' as const;
+  const { data: weightLogsData } = useWeightLogs();
+  const analyticsRange = activeTab === 'Week' ? 'week' as const : activeTab === 'Month' ? 'month' as const : '3months' as const;
   const { data: analyticsData } = useAnalyticsTrends(analyticsRange);
   const today = new Date().toISOString().split('T')[0];
   const { data: todayStats } = useStatsSummary(today);
 
   const goals = meData?.goals;
   const streak = meData?.streak ?? { currentStreak: 0, longestStreak: 0, lastLoggedDate: '' };
-  const weightLogs = weightLogsData ?? [];
+  const weightLogs = Array.isArray(weightLogsData) ? weightLogsData : (weightLogsData?.logs ?? []);
   const trends = analyticsData?.trends ?? [];
   const averages = analyticsData?.averages;
   const daysOnTrack = analyticsData?.daysOnTrack ?? 0;
@@ -134,7 +134,7 @@ export default function ProgressScreen() {
         { label: 'Now', value: currentW },
       ];
     }
-    return weightLogs.slice(0, 7).reverse().map((w) => ({
+    return weightLogs.slice(0, 7).reverse().map((w: any) => ({
       label: new Date(w.loggedAt).getDate().toString(),
       value: w.weightKg,
     }));

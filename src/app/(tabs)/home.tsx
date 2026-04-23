@@ -4,7 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
-import { Apple, Plus, Camera, ScanBarcode, FileText, Image, PenLine, Dumbbell, UtensilsCrossed } from 'lucide-react-native';
+import { Apple, Plus, Camera, Image, PenLine, UtensilsCrossed } from 'lucide-react-native';
 import { CalorieRing } from '@/components/CalorieRing';
 import { MacroRing } from '@/components/MacroRing';
 import { MealCard } from '@/components/MealCard';
@@ -40,12 +40,9 @@ export default function HomeScreen() {
   const fabStyle = useAnimatedStyle(() => ({ transform: [{ scale: fabScale.value }] }));
 
   const actions = [
-    { icon: Camera, label: 'Scan Meal', route: '/capture' },
-    { icon: ScanBarcode, label: 'Barcode', route: '/capture/barcode' },
-    { icon: FileText, label: 'Food Label', route: '/capture/food-label' },
-    { icon: Image, label: 'Library', route: '/capture/library' },
-    { icon: PenLine, label: 'Manual Entry', route: '/capture/review' },
-    { icon: Dumbbell, label: 'Log Exercise', route: '/exercise' },
+    { icon: Camera, label: 'Take Photo', route: '/capture' },
+    { icon: Image, label: 'Choose from Library', route: '/capture/library' },
+    { icon: PenLine, label: 'Manual Entry', route: '/capture/food-label' },
   ];
 
   return (

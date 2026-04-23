@@ -8,7 +8,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
 import { signupApi } from '@/lib/api-hooks';
-import { signInWithApple, isAppleAvailable } from '@/nova8/backend/auth';
+import { isAppleAvailable, getToken as getNovaToken } from '@/nova8/backend/auth';
+import { auth } from '@/nova8/backend';
 import { colors } from '@/lib/theme';
 import { hapticMedium, hapticSuccess } from '@/lib/haptics';
 export default function SignUpScreen() {
@@ -39,8 +40,9 @@ export default function SignUpScreen() {
     hapticMedium();
 
     try {
-      const data = await signupApi(email.trim(), password, name.trim());
-      setAuth(data.user, data.token);
+      const authUser = await signupApi(email.trim(), password, name.trim());
+      const token = await getNovaToken();
+      setAuth(authUser as any, token || '');
       hapticSuccess();
       router.replace('/onboarding/step-1');
     } catch (err: unknown) {
@@ -56,13 +58,18 @@ export default function SignUpScreen() {
     hapticMedium();
 
     try {
-      const data = await signInWithApple();
-      setAuth(data.user, data.token);
+      const user = await auth.signInWithApple();
+      const token = await getNovaToken();
+      setAuth(user as any, token || '');
       hapticSuccess();
       router.replace('/onboarding/step-1');
     } catch (err: unknown) {
+      if ((err as any)?.code === 'ERR_CANCELED') {
+        setError('Sign up cancelled');
+        return;
+      }
       const message = err instanceof Error ? err.message : 'Apple sign-up failed';
-      setError(message);
+      setError(message.includes('Network') || message.includes('fetch') ? 'Apple Sign In failed — please try email instead' : message);
     }
   };
 

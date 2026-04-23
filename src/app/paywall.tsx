@@ -29,7 +29,7 @@ export default function PaywallScreen() {
     hapticMedium();
     await new Promise(r => setTimeout(r, 1200));
     entitlementMutation.mutate(
-      { isPro: true, productId: 'yearly_pro' },
+      { isPro: true },
       {
         onSuccess: () => {
           hapticSuccess();

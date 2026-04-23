@@ -9,7 +9,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
 import { loginApi } from '@/lib/api-hooks';
-import { signInWithApple, isAppleAvailable } from '@/nova8/backend/auth';
+import { isAppleAvailable, getToken as getNovaToken } from '@/nova8/backend/auth';
+import { auth } from '@/nova8/backend';
 import { colors } from '@/lib/theme';
 import { hapticMedium, hapticSuccess } from '@/lib/haptics';
 export default function SignInScreen() {
@@ -42,11 +43,12 @@ export default function SignInScreen() {
     hapticMedium();
 
     try {
-      const data = await loginApi(email.trim(), password);
-      setAuth(data.user, data.token);
+      const authUser = await loginApi(email.trim(), password);
+      const token = await getNovaToken();
+      setAuth(authUser as any, token || '');
 
       // Check if the user has completed onboarding by verifying goals have actual calorie values
-      const hasCompletedOnboarding = data.goals && typeof (data.goals as any).daily_calories === 'number' && (data.goals as any).daily_calories > 0;
+      const hasCompletedOnboarding = (authUser as any).goals && typeof (authUser as any).goals.daily_calories === 'number' && (authUser as any).goals.daily_calories > 0;
 
       if (hasCompletedOnboarding) {
         setOnboarded(true);
@@ -71,11 +73,11 @@ export default function SignInScreen() {
     hapticMedium();
 
     try {
-      const data = await signInWithApple();
-      setAuth(data.user, data.token);
+      const user = await auth.signInWithApple();
+      const token = await getNovaToken();
+      setAuth(user as any, token || '');
 
-      // Check if the user has completed onboarding
-      const hasCompletedOnboarding = (data.user as any).goals && typeof (data.user as any).goals.daily_calories === 'number' && (data.user as any).goals.daily_calories > 0;
+      const hasCompletedOnboarding = (user as any).goals?.daily_calories > 0;
 
       if (hasCompletedOnboarding) {
         setOnboarded(true);
@@ -88,8 +90,12 @@ export default function SignInScreen() {
         router.replace('/onboarding/step-1');
       }
     } catch (err: unknown) {
+      if ((err as any)?.code === 'ERR_CANCELED') {
+        setError('Sign in cancelled');
+        return;
+      }
       const message = err instanceof Error ? err.message : 'Apple sign-in failed';
-      setError(message);
+      setError(message.includes('Network') || message.includes('fetch') ? 'Apple Sign In failed — please try email instead' : message);
     }
   };
 

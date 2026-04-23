@@ -112,11 +112,19 @@ export function getUserById(id: string): PublicUser | null {
   return row ?? null;
 }
 
-export function getUserByEmail(email: string): (PublicUser & { passwordHash: string }) | null {
+export function getUserByEmail(email: string | null): (PublicUser & { passwordHash: string }) | null {
+  if (!email) return null;
   const row = db
     .prepare(
       'SELECT id, email, name, password_hash as passwordHash, created_at as createdAt FROM users WHERE email = ? COLLATE NOCASE',
     )
     .get(normalizeEmail(email)) as (PublicUser & { passwordHash: string }) | undefined;
+  return row ?? null;
+}
+
+export function getUserByAppleId(appleId: string): PublicUser | null {
+  const row = db
+    .prepare('SELECT id, email, name, created_at as createdAt FROM users WHERE apple_id = ?')
+    .get(appleId) as PublicUser | undefined;
   return row ?? null;
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, Pressable } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring } from 'react-native-reanimated';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Text } from '@/components/ui/text';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Sparkles, Flame, Beef, Wheat, Droplets, ChevronLeft } from 'lucide-react-native';
@@ -46,6 +47,7 @@ export default function OnboardingStep6() {
   const [targets, setTargets] = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
   const setOnboarded = useAppStore(s => s.setOnboarded);
   const goalsMutation = useGoalsMutation();
+  const queryClient = useQueryClient();
 
   const cardOpacity = useSharedValue(0);
   const cardScale = useSharedValue(0.9);
@@ -84,6 +86,10 @@ export default function OnboardingStep6() {
         carbsG: targets.carbs,
         fatG: targets.fat,
       });
+      // Force an immediate refetch of the /auth/me endpoint so the home screen sees fresh goals
+      await queryClient.invalidateQueries({ queryKey: ['me'], refetchType: 'all' });
+      // Wait for the refetch to complete before navigating
+      await new Promise(resolve => setTimeout(resolve, 200));
       setOnboarded(true);
       router.replace('/(tabs)/home');
     } catch (error) {
@@ -131,7 +137,7 @@ export default function OnboardingStep6() {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}>
             <View style={{ paddingTop: 70, marginBottom: 8 }}>
               <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.border }}>
                 <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.primary, width: '100%' }} />
@@ -165,7 +171,12 @@ export default function OnboardingStep6() {
           </ScrollView>
 
           <Animated.View style={[cardStyle, { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingBottom: 40, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border }]}>
-            <PillButton title="Let's Go!" onPress={handleLetsGo} fullWidth />
+            <PillButton
+              title={goalsMutation.isPending ? "Saving..." : "Let's Go!"}
+              onPress={handleLetsGo}
+              disabled={goalsMutation.isPending}
+              fullWidth
+            />
           </Animated.View>
         </>
       )}

@@ -1,41 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, Pressable } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Text } from '@/components/ui/text';
-import { ScanLine, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { AlertCircle } from 'lucide-react-native';
 import { useAppStore } from '@/lib/store';
 import { useVisionAnalyze } from '@/lib/api-hooks';
 import { colors } from '@/lib/theme';
-import { hapticMedium } from '@/lib/haptics';
 
 export default function AnalyzingScreen() {
-  const rotation = useSharedValue(0);
-  const pulse = useSharedValue(0.9);
   const pendingMeal = useAppStore(s => s.pendingMeal);
   const setPendingMeal = useAppStore(s => s.setPendingMeal);
   const visionMutation = useVisionAnalyze();
-  const didRun = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
-  }));
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: pulse.value,
-  }));
-
-  const analyze = () => {
+  useEffect(() => {
     const imageBase64 = (pendingMeal as Record<string, unknown> | null)?.imageBase64 as string | undefined;
 
+    // Pre-flight guard — no photo captured
     if (!imageBase64) {
-      // No image to analyze — just proceed to review with existing data
-      const timer = setTimeout(() => {
-        router.replace('/capture/review');
-      }, 1500);
-      return () => clearTimeout(timer);
+      setError('No photo captured — go back and try again');
+      return;
     }
 
     // Call real vision API
@@ -70,78 +54,39 @@ export default function AnalyzingScreen() {
         },
         onError: (err: any) => {
           console.error('[analyzing] vision API error:', err);
-          // Show recoverable error state with retry
-          setError(err?.message || 'Network request failed');
+          // NEVER show raw error message to user — log to console only
+          setError('Analysis failed — please try again');
         },
       }
     );
-  };
-
-  const handleRetry = () => {
-    hapticMedium();
-    setError(null);
-    didRun.current = false;
-    analyze();
-  };
-
-  useEffect(() => {
-    rotation.value = withRepeat(withTiming(360, { duration: 2000, easing: Easing.linear }), -1, false);
-    pulse.value = withRepeat(withTiming(1.1, { duration: 1000 }), -1, true);
-
-    if (didRun.current) return;
-    didRun.current = true;
-
-    analyze();
-  }, []);
+  }, [pendingMeal, setPendingMeal, visionMutation]);
 
   if (error) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
-        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' }}>
-          <AlertCircle size={40} color="#DC2626" />
+      <View className="flex-1 items-center justify-center p-6 bg-gray-950">
+        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: 'rgba(220, 38, 38, 0.15)' }}>
+          <AlertCircle size={32} color="#DC2626" />
         </View>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginTop: 24, textAlign: 'center' }}>Analysis failed</Text>
-        <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>{error}</Text>
+        <Text className="text-xl font-semibold text-white mb-2">Analysis failed</Text>
+        <Text className="text-gray-400 text-center mb-6">{error}</Text>
         <Pressable
-          onPress={handleRetry}
-          accessibilityLabel="Retry analysis"
-          testID="retry-analysis"
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 8,
-            backgroundColor: colors.primary, borderRadius: 999,
-            paddingHorizontal: 24, paddingVertical: 14, marginTop: 32,
-          }}
+          className="px-6 py-3 rounded-full"
+          style={{ backgroundColor: colors.carbs }}
+          onPress={() => router.back()}
         >
-          <RefreshCw size={18} color="#fff" />
-          <Text style={{ fontSize: 15, fontWeight: '600', color: '#fff' }}>Try Again</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.replace('/capture/review')}
-          accessibilityLabel="Continue anyway"
-          testID="continue-anyway"
-          style={{ marginTop: 16, paddingVertical: 12 }}
-        >
-          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary }}>Continue with manual entry</Text>
+          <Text className="text-white font-semibold text-center">
+            Go back
+          </Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={pulseStyle}>
-        <Animated.View style={[ringStyle, {
-          width: 100, height: 100, borderRadius: 50,
-          borderWidth: 3, borderColor: colors.primary,
-          borderTopColor: 'transparent',
-          alignItems: 'center', justifyContent: 'center',
-        }]}>
-          <ScanLine size={36} color={colors.primary} />
-        </Animated.View>
-      </Animated.View>
-      <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginTop: 32 }}>Analyzing your meal...</Text>
-      <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 8 }}>AI is identifying food items</Text>
-      <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+    <View className="flex-1 items-center justify-center bg-gray-950">
+      <ActivityIndicator size="large" color={colors.carbs} />
+      <Text className="text-white text-lg mt-4">Analyzing your meal...</Text>
+      <Text className="text-gray-400 text-sm mt-2">This may take a few seconds</Text>
     </View>
   );
 }
