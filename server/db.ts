@@ -27,6 +27,17 @@ import fs from 'fs';
 const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'data.db');
 
 function openOrRecreate(p: string): Database.Database {
+  // Ensure parent directory exists
+  const dir = path.dirname(p);
+  if (!fs.existsSync(dir)) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`[db] created directory: ${dir}`);
+    } catch (e: any) {
+      console.warn(`[db] could not create directory ${dir}:`, e.message);
+    }
+  }
+
   const tryOpen = (): Database.Database => {
     const d = new Database(p);
     d.pragma('journal_mode = WAL');

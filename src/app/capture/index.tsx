@@ -24,21 +24,30 @@ export default function CaptureScreen() {
 
     if (Platform.OS === 'web') {
       // On web, use image picker instead of camera
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.8,
-        base64: true,
-      });
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.8,
+          base64: true,
+        });
 
-      if (!result.canceled && result.assets[0]) {
-        // Pass base64 for vision API analysis
-        setPendingMeal({
-          name: 'Analyzing...',
-          photoUrl: result.assets[0].uri,
-          imageBase64: result.assets[0].base64 ?? undefined,
-          eatenAt: new Date().toISOString(),
-        } as any);
-        router.push('/capture/analyzing');
+        if (!result.canceled && result.assets[0]) {
+          const imageBase64 = result.assets[0].base64;
+          if (!imageBase64) {
+            console.warn('[capture] no base64 from image picker');
+            return;
+          }
+          // Pass base64 for vision API analysis
+          setPendingMeal({
+            name: 'Analyzing...',
+            photoUrl: result.assets[0].uri,
+            imageBase64,
+            eatenAt: new Date().toISOString(),
+          } as any);
+          router.push('/capture/analyzing');
+        }
+      } catch (e) {
+        console.error('[capture] web image picker error:', e);
       }
       return;
     }
@@ -46,7 +55,10 @@ export default function CaptureScreen() {
     // On native, use camera
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') return;
+      if (status !== 'granted') {
+        console.warn('[capture] camera permission denied');
+        return;
+      }
 
       const result = await ImagePicker.launchCameraAsync({
         quality: 0.8,
@@ -54,15 +66,21 @@ export default function CaptureScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
+        const imageBase64 = result.assets[0].base64;
+        if (!imageBase64) {
+          console.warn('[capture] no base64 from camera');
+          return;
+        }
         setPendingMeal({
           name: 'Analyzing...',
           photoUrl: result.assets[0].uri,
-          imageBase64: result.assets[0].base64 ?? undefined,
+          imageBase64,
           eatenAt: new Date().toISOString(),
         } as any);
         router.push('/capture/analyzing');
       }
     } catch (e) {
+      console.error('[capture] camera error:', e);
       // Fallback: go straight to review with demo data
       setPendingMeal({
         name: 'Scanned Meal',

@@ -41,13 +41,15 @@ export default function BarcodeScreen() {
           fatG: fat,
           items: [{ id: '1', name, calories: cal, proteinG: pro, carbsG: carb, fatG: fat, quantity: 100, unit: 'g' }],
           eatenAt: new Date().toISOString(),
-        });
+          aiConfidence: 'high', // barcode database is exact
+        } as any);
         hapticSuccess();
         router.push('/capture/review');
       } else {
         setError('Product not found. Try another barcode.');
       }
-    } catch {
+    } catch (err: any) {
+      console.error('[barcode] lookup error:', err);
       setError('Could not look up barcode. Check your connection.');
     }
 
@@ -65,7 +67,8 @@ export default function BarcodeScreen() {
       fatG: fat,
       items: [{ id: '1', name, calories: cal, proteinG: pro, carbsG: carb, fatG: fat, quantity: 100, unit: 'g' }],
       eatenAt: new Date().toISOString(),
-    });
+      aiConfidence: 'high',
+    } as any);
     router.push('/capture/review');
   };
 

@@ -41,7 +41,8 @@ export default function LibraryScreen() {
       fatG: fat,
       items: [{ id: food.id, name: food.name, calories: cal, proteinG: pro, carbsG: carb, fatG: fat, quantity: servingG, unit: food.servingUnit || 'g' }],
       eatenAt: new Date().toISOString(),
-    });
+      aiConfidence: 'high', // library items are exact
+    } as any);
     router.push('/capture/review');
   };
 

@@ -3,7 +3,7 @@ import { View, Pressable, ScrollView, TextInput } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Text } from '@/components/ui/text';
-import { ArrowLeft, Share2, Pencil, Flame, Trash2, Plus, Check } from 'lucide-react-native';
+import { ArrowLeft, Share2, Pencil, Flame, Trash2, Plus, Check, AlertCircle } from 'lucide-react-native';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
 import { useCreateMeal } from '@/lib/api-hooks';
@@ -22,16 +22,17 @@ export default function ReviewScreen() {
     { id: '3', name: 'Mixed Vegetables', calories: 55, proteinG: 3, carbsG: 6, fatG: 2, quantity: 100, unit: 'g' },
   ];
 
+  const aiConfidence = (pendingMeal as any)?.aiConfidence;
   const [mealName, setMealName] = useState<string>(pendingMeal?.name ?? 'Grilled Chicken Bowl');
   const [editing, setEditing] = useState<boolean>(false);
   const [items, setItems] = useState<MealItem[]>((pendingMeal?.items ?? defaultItems) as MealItem[]);
   const [loading, setLoading] = useState<boolean>(false);
 
   const totals = useMemo(() => ({
-    calories: items.reduce((s, i) => s + i.calories, 0),
-    protein: items.reduce((s, i) => s + i.proteinG, 0),
-    carbs: items.reduce((s, i) => s + i.carbsG, 0),
-    fat: items.reduce((s, i) => s + i.fatG, 0),
+    calories: items.reduce((s, i) => s + (i.calories ?? 0), 0),
+    protein: items.reduce((s, i) => s + (i.proteinG ?? 0), 0),
+    carbs: items.reduce((s, i) => s + (i.carbsG ?? 0), 0),
+    fat: items.reduce((s, i) => s + (i.fatG ?? 0), 0),
   }), [items]);
 
   const deleteItem = (id: string) => {
@@ -119,42 +120,54 @@ export default function ReviewScreen() {
         {/* Calories Card */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: colors.border, alignItems: 'center', marginBottom: 16 }}>
           <Flame size={24} color={colors.primary} />
-          <Text style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, letterSpacing: -2, marginTop: 4 }}>{totals.calories}</Text>
+          <Text style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, letterSpacing: -2, marginTop: 4 }}>{totals.calories ?? 0}</Text>
           <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary }}>Calories</Text>
+          {aiConfidence === 'low' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, backgroundColor: '#FEF3C7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+              <AlertCircle size={12} color="#D97706" />
+              <Text style={{ fontSize: 11, fontWeight: '500', color: '#D97706' }}>Estimate may be less accurate</Text>
+            </View>
+          )}
         </View>
 
         {/* Macro Chips */}
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
           <View style={{ flex: 1, backgroundColor: `${colors.protein}15`, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein }}>{totals.protein}g</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein }}>{totals.protein ?? 0}g</Text>
             <Text style={{ fontSize: 11, color: colors.protein, fontWeight: '500' }}>Protein</Text>
           </View>
           <View style={{ flex: 1, backgroundColor: `${colors.carbs}15`, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{totals.carbs}g</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{totals.carbs ?? 0}g</Text>
             <Text style={{ fontSize: 11, color: colors.carbs, fontWeight: '500' }}>Carbs</Text>
           </View>
           <View style={{ flex: 1, backgroundColor: `${colors.fat}15`, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.fat }}>{totals.fat}g</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.fat }}>{totals.fat ?? 0}g</Text>
             <Text style={{ fontSize: 11, color: colors.fat, fontWeight: '500' }}>Fat</Text>
           </View>
         </View>
 
         {/* Meal Items */}
         <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>Meal Items</Text>
-        {items.map(item => (
-          <View key={item.id} style={{
-            flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
-            borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8,
-          }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textPrimary }}>{item.name}</Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{item.quantity}{item.unit} · {item.calories} kcal</Text>
-            </View>
-            <Pressable onPress={() => deleteItem(item.id)} accessibilityLabel={`Delete ${item.name}`} testID={`delete-item-${item.id}`} style={{ padding: 8 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Trash2 size={16} color="#E05555" />
-            </Pressable>
+        {items.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+            <Text style={{ fontSize: 14, color: colors.textSecondary }}>No items yet — add items to build your meal</Text>
           </View>
-        ))}
+        ) : (
+          items.map(item => (
+            <View key={item.id} style={{
+              flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+              borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8,
+            }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textPrimary }}>{item.name}</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{item.quantity ?? 1}{item.unit} · {item.calories ?? 0} kcal</Text>
+              </View>
+              <Pressable onPress={() => deleteItem(item.id)} accessibilityLabel={`Delete ${item.name}`} testID={`delete-item-${item.id}`} style={{ padding: 8 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Trash2 size={16} color="#E05555" />
+              </Pressable>
+            </View>
+          ))
+        )}
 
         {/* Add items */}
         <Pressable

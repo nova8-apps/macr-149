@@ -33,7 +33,8 @@ export default function FoodLabelScreen() {
       fatG: ft,
       items: [{ id: '1', name, calories: cal, proteinG: pro, carbsG: cb, fatG: ft, quantity: 1, unit: servingSize || 'serving' }],
       eatenAt: new Date().toISOString(),
-    });
+      aiConfidence: 'high', // manual entry is exact
+    } as any);
     hapticSuccess();
     router.push('/capture/review');
   };

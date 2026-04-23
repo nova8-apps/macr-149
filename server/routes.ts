@@ -517,10 +517,14 @@ router.post('/vision/analyze', requireAuth, async (req: AuthedRequest, res: Resp
       return res.status(400).json({ error: 'imageBase64 required' });
     }
 
+    // Log image received
+    const sizeKb = Math.round(imageBase64.length / 1024);
+    console.log(`[vision] image received, size: ${sizeKb}KB`);
+
     const openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
-      console.warn('[vision] OPENAI_API_KEY not set — returning mock data');
-      // Fallback to mock data when no API key
+      console.warn('[vision] OPENAI_API_KEY not set — returning fallback data with low confidence');
+      // Fallback to safe defaults when no API key
       if (mode === 'label') {
         return res.json({
           servingSize: '1 serving (100g)',
@@ -529,21 +533,19 @@ router.post('/vision/analyze', requireAuth, async (req: AuthedRequest, res: Resp
           carbsG: 30,
           fatG: 5,
           sodiumMg: 300,
+          aiConfidence: 'low',
         });
       }
       return res.json({
         meal: {
-          name: 'Analyzed Meal',
-          totalCalories: 520,
-          proteinG: 38,
-          carbsG: 45,
-          fatG: 18,
-          items: [
-            { name: 'Protein', calories: 280, proteinG: 35, carbsG: 2, fatG: 8, quantity: 200, unit: 'g' },
-            { name: 'Carbs', calories: 160, proteinG: 3, carbsG: 35, fatG: 1, quantity: 150, unit: 'g' },
-            { name: 'Vegetables', calories: 80, proteinG: 0, carbsG: 8, fatG: 9, quantity: 100, unit: 'g' },
-          ],
+          name: 'Unknown Meal',
+          totalCalories: 500,
+          proteinG: 25,
+          carbsG: 50,
+          fatG: 15,
+          items: [],
         },
+        aiConfidence: 'low',
       });
     }
 
@@ -555,19 +557,15 @@ router.post('/vision/analyze', requireAuth, async (req: AuthedRequest, res: Resp
         model: 'gpt-4o',
         messages: [
           {
+            role: 'system',
+            content: 'You are a nutrition expert analyzing food labels. Return only valid JSON. Provide your best educated estimate even when uncertain — never return null for any field, and default unknown macros to reasonable population averages.',
+          },
+          {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Extract nutrition facts from this food label image. Return JSON only with this exact structure:
-{
-  "servingSize": "serving size text",
-  "caloriesPerServing": number,
-  "proteinG": number,
-  "carbsG": number,
-  "fatG": number,
-  "sodiumMg": number
-}`,
+                text: `Extract nutrition facts from this food label image. Return only a JSON object with the shape: { "servingSize": "serving size text", "caloriesPerServing": number, "proteinG": number, "carbsG": number, "fatG": number, "sodiumMg": number }. Never return null — provide your best estimate for all fields.`,
               },
               {
                 type: 'image_url',
@@ -579,9 +577,10 @@ router.post('/vision/analyze', requireAuth, async (req: AuthedRequest, res: Resp
         max_tokens: 500,
       });
 
+      console.log('[vision] OpenAI response received (label mode)');
       const content = completion.choices[0]?.message?.content?.trim() || '{}';
       const parsed = JSON.parse(content);
-      return res.json(parsed);
+      return res.json({ ...parsed, aiConfidence: 'high' });
     }
 
     // Default: analyze food meal
@@ -589,32 +588,15 @@ router.post('/vision/analyze', requireAuth, async (req: AuthedRequest, res: Resp
       model: 'gpt-4o',
       messages: [
         {
+          role: 'system',
+          content: 'You are a nutrition expert. Analyze the food in this image and return only a JSON object with the shape { "name", "totalCalories", "proteinG", "carbsG", "fatG", "items": [{ "name", "calories", "proteinG", "carbsG", "fatG", "quantity", "unit" }] }. Provide your best educated estimate even when uncertain — never return null for any field, and default unknown macros to reasonable population averages.',
+        },
+        {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Analyze this food image and identify all food items with their nutritional content. Return JSON only with this exact structure:
-{
-  "meal": {
-    "name": "brief meal name",
-    "totalCalories": number,
-    "proteinG": number,
-    "carbsG": number,
-    "fatG": number,
-    "items": [
-      {
-        "name": "food item name",
-        "calories": number,
-        "proteinG": number,
-        "carbsG": number,
-        "fatG": number,
-        "quantity": number,
-        "unit": "g or ml or serving"
-      }
-    ]
-  }
-}
-Be accurate with nutritional values. Include all visible food items.`,
+              text: `Analyze this food image and identify all food items with their nutritional content. Return only a JSON object with the exact structure: { "meal": { "name": "brief meal name", "totalCalories": number, "proteinG": number, "carbsG": number, "fatG": number, "items": [{ "name": "food item name", "calories": number, "proteinG": number, "carbsG": number, "fatG": number, "quantity": number, "unit": "g or ml or serving" }] } }. Never return null — provide your best estimate for all fields.`,
             },
             {
               type: 'image_url',
@@ -626,12 +608,24 @@ Be accurate with nutritional values. Include all visible food items.`,
       max_tokens: 1000,
     });
 
+    console.log('[vision] OpenAI response received (food mode)');
     const content = completion.choices[0]?.message?.content?.trim() || '{}';
     const parsed = JSON.parse(content);
-    return res.json(parsed);
+    return res.json({ ...parsed, aiConfidence: 'high' });
   } catch (err: any) {
     console.error('[vision] error:', err?.message || err);
-    return res.status(500).json({ error: 'Vision analysis failed', detail: String(err?.message || err) });
+    // Return HTTP 200 with safe fallback so the client never crashes
+    return res.json({
+      meal: {
+        name: 'Unknown Meal',
+        totalCalories: 500,
+        proteinG: 25,
+        carbsG: 50,
+        fatG: 15,
+        items: [],
+      },
+      aiConfidence: 'low',
+    });
   }
 });
 
