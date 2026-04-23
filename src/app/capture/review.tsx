@@ -16,17 +16,12 @@ export default function ReviewScreen() {
   const setPendingMeal = useAppStore(s => s.setPendingMeal);
   const createMealMutation = useCreateMeal();
 
-  const defaultItems: MealItem[] = [
-    { id: '1', name: 'Grilled Chicken', calories: 250, proteinG: 35, carbsG: 0, fatG: 8, quantity: 180, unit: 'g' },
-    { id: '2', name: 'Brown Rice', calories: 150, proteinG: 3, carbsG: 32, fatG: 1, quantity: 120, unit: 'g' },
-    { id: '3', name: 'Mixed Vegetables', calories: 55, proteinG: 3, carbsG: 6, fatG: 2, quantity: 100, unit: 'g' },
-  ];
-
   const aiConfidence = (pendingMeal as any)?.aiConfidence;
-  const [mealName, setMealName] = useState<string>(pendingMeal?.name ?? 'Grilled Chicken Bowl');
+  const [mealName, setMealName] = useState<string>(pendingMeal?.name ?? 'New Meal');
   const [editing, setEditing] = useState<boolean>(false);
-  const [items, setItems] = useState<MealItem[]>((pendingMeal?.items ?? defaultItems) as MealItem[]);
+  const [items, setItems] = useState<MealItem[]>((pendingMeal?.items ?? []) as MealItem[]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const totals = useMemo(() => ({
     calories: items.reduce((s, i) => s + (i.calories ?? 0), 0),
@@ -41,6 +36,16 @@ export default function ReviewScreen() {
   };
 
   const handleSave = async () => {
+    const trimmedName = mealName.trim();
+    if (!trimmedName) {
+      setSaveError('Please enter a meal name');
+      return;
+    }
+    if (items.length === 0) {
+      setSaveError('Add at least one item before saving');
+      return;
+    }
+    setSaveError(null);
     setLoading(true);
     hapticMedium();
 
@@ -70,8 +75,18 @@ export default function ReviewScreen() {
           setLoading(false);
           router.replace('/(tabs)/home');
         },
-        onError: () => {
+        onError: (err: any) => {
+          console.error('[review] create meal failed:', err);
           setLoading(false);
+          const status = err?.status as number | undefined;
+          const msg = typeof err?.message === 'string' ? err.message : '';
+          if (status === 401 || /No signed-in user|Not signed in|token/i.test(msg)) {
+            setSaveError('Please sign in again to save meals');
+          } else if (status === 429) {
+            setSaveError('Too many saves today — try again later');
+          } else {
+            setSaveError('Could not save meal — please try again');
+          }
         },
       }
     );
@@ -89,6 +104,12 @@ export default function ReviewScreen() {
           <Share2 size={18} color={colors.textSecondary} />
         </Pressable>
       </View>
+
+      {saveError ? (
+        <View style={{ marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FEE2E2', borderRadius: 12, padding: 12 }}>
+          <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '500' }}>{saveError}</Text>
+        </View>
+      ) : null}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}>
         {/* Meal Name */}
