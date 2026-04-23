@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Macr",
+    "slug": "macr-app",
+    "scheme": "macrapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nova8.macrolens",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses your camera to scan food items and barcodes for nutritional information.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to let you select food images for analysis.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to track your routes and distance.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "1",
+      "privacyPolicyUrl": "https://nova8.dev/privacy/149",
+      "icon": "./assets/icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.nova8.macrolens"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "extra": {
+      "apiBaseUrl": "https://nova8.dev",
+      "projectId": 149,
+      "projectApiKey": "nv8pk_WzlqCANDB0SnXkoKucr6pZ8AcEiIaYlzYRzqC7ng624",
+      "privacyPolicyUrl": "https://nova8.dev/privacy/149"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1" />
+  <title>Nova8 App</title>
+  <style>
+    html, body { margin:0; padding:0; height:100%; background:#000; }
+    #root { margin:0; padding:0; height:100%; background:#000; display:flex; flex-direction:column; overflow:hidden; }
+    #root > div { display:flex; flex-direction:column; flex:1; min-height:0; }
+    #__nova8_loader {
+      position:fixed; inset:0; z-index:99998; display:flex; align-items:center; justify-content:center;
+      background:#000; font-family:-apple-system,system-ui,sans-serif;
+    }
+    #__nova8_loader .spinner { width:24px; height:24px; border:2px solid #333; border-top-color:#8b5cf6; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    #__nova8_error_overlay {
+      display:none; position:fixed; inset:0; z-index:99999; background:#1a1a2e; color:#eee;
+      padding:24px; font-family:monospace; overflow:auto;
+    }
+    #__nova8_error_overlay h2 { color:#e94560; margin:0 0 12px; font-size:18px; }
+    #__nova8_error_overlay pre { white-space:pre-wrap; font-size:13px; line-height:1.5; color:#ccc; }
+  </style>
+  <script>
+    // Catch errors BEFORE React loads — this runs first
+    window.onerror = function(msg, src, line, col, err) {
+      var el = document.getElementById('__nova8_error_overlay');
+      if (el) {
+        var loader = document.getElementById('__nova8_loader');
+        if (loader) loader.style.display = 'none';
+        el.style.display = 'block';
+        el.innerHTML = '<h2>Runtime Error</h2><pre>' + (err && err.stack ? err.stack : msg) + '</pre>';
+      }
+    };
+    window.onunhandledrejection = function(e) {
+      console.error('[Unhandled Promise]', e.reason);
+    };
+    // Hide loader once React renders (check periodically)
+    var _checkInterval = setInterval(function() {
+      var root = document.getElementById('root');
+      if (root && root.children.length > 0) {
+        var loader = document.getElementById('__nova8_loader');
+        if (loader) loader.style.display = 'none';
+        clearInterval(_checkInterval);
+      }
+    }, 500);
+    // Fallback: after 30s show a helpful message instead of silently hiding
+    setTimeout(function() {
+      var loader = document.getElementById('__nova8_loader');
+      if (loader) {
+        loader.innerHTML = '<div style="text-align:center;color:#999;font-family:-apple-system,sans-serif;font-size:13px;line-height:1.5"><p>Taking longer than expected...</p><p style="font-size:11px;color:#666">The app bundle may still be compiling.<br>Try reloading in a few seconds.</p></div>';
+      }
+      clearInterval(_checkInterval);
+    }, 30000);
+  </script>
+</head>
+<body>
+  <div id="__nova8_loader"><div class="spinner"></div></div>
+  <div id="__nova8_error_overlay"></div>
+  <div id="root"></div>
+</body>
+</html>
