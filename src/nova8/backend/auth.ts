@@ -37,6 +37,17 @@ import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 
+// Wave 3n — single source of truth for API base / project id / project API key.
+// Previously this file had its own private resolvers that only checked the new
+// `nova8ProjectId` / `nova8ProjectApiKey` keys. That broke every project built
+// before the Wave 18.11 rename (which still uses `projectId` / `projectApiKey`
+// in app.json), causing sign-in + sign-up forms to surface:
+//   "[nova8/auth] Missing Nova8 project id. Expected `expo.extra.nova8ProjectId` in app.json."
+// and Apple sign-in to fail with the generic "The authorization attempt failed
+// for an unknown reason" (the throw happened AFTER Apple granted the token).
+// Importing from _config.ts ensures both old and new key names work forever.
+import { getApiBase, getProjectId, getProjectApiKey } from "./_config";
+
 // Required by AuthSession on iOS for the OAuth redirect to close the browser
 WebBrowser.maybeCompleteAuthSession();
 
@@ -54,48 +65,6 @@ export type AuthStateCallback = (user: Nova8User | null) => void;
 // ── Config ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "nova8.auth.session";
-
-function getProjectId(): string {
-  const id =
-    (Constants.expoConfig as any)?.extra?.nova8ProjectId ??
-    process.env.EXPO_PUBLIC_NOVA8_PROJECT_ID;
-  if (!id) {
-    throw new Error(
-      "[nova8/auth] Missing Nova8 project id. Expected `expo.extra.nova8ProjectId` in app.json.",
-    );
-  }
-  return String(id);
-}
-
-function getApiBase(): string {
-  const configured =
-    (Constants.expoConfig as any)?.extra?.apiBaseUrl ??
-    process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (configured) return String(configured).replace(/\/$/, "");
-
-  // Web (Expo Go / preview) fallback — same-origin.
-  if (typeof window !== "undefined" && (window as any).location?.origin) {
-    const origin = (window as any).location.origin.replace(/\/$/, "");
-    // Nova8 preview runs the app on 8081-<id>.e2b.app and the API on 3000-<id>.e2b.app
-    const mapped = origin.replace(/^https?:\/\/8081-/, "https://3000-");
-    return mapped;
-  }
-  throw new Error(
-    "[nova8/auth] No API base URL. Set `expo.extra.apiBaseUrl` in app.json.",
-  );
-}
-
-function getProjectApiKey(): string {
-  const key =
-    (Constants.expoConfig as any)?.extra?.nova8ProjectApiKey ??
-    process.env.EXPO_PUBLIC_NOVA8_PROJECT_API_KEY;
-  if (!key) {
-    throw new Error(
-      "[nova8/auth] Missing project API key. Expected `expo.extra.nova8ProjectApiKey` in app.json.",
-    );
-  }
-  return String(key);
-}
 
 // ── Session cache + listener fan-out ─────────────────────────────────────
 
