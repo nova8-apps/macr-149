@@ -15,6 +15,7 @@
 // from the collections above. Food search is a curated static list for
 // now (USDA requires a server endpoint we don't have yet).
 
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { auth, db, openai } from '@/nova8/backend';
 
@@ -116,6 +117,44 @@ export function useMe() {
     },
     staleTime: 5 * 60 * 1000,
   });
+}
+
+/**
+ * Convenience hook for gating Pro-only features.
+ *
+ * Returns the current Pro state plus a `requirePro(onPro)` helper:
+ *   - If the user already has Pro: invokes `onPro()` immediately.
+ *   - Otherwise: navigates to `/paywall` and returns without invoking `onPro`.
+ *
+ * This is the canonical way to gate any Pro feature in the app. Use it instead
+ * of branching on `meData?.entitlement?.isPro` inline — keeps the gate logic
+ * in one place so if we ever change the entitlement field name (e.g. move to
+ * RC as single source of truth), only this hook changes.
+ *
+ * Usage:
+ *   const { isPro, requirePro } = useIsPro();
+ *   <Pressable onPress={() => requirePro(() => router.push('/capture'))} />
+ */
+export function useIsPro(): {
+  isPro: boolean;
+  isLoading: boolean;
+  requirePro: (onPro: () => void) => void;
+} {
+  const { data: meData, isLoading } = useMe();
+  const isPro = meData?.entitlement?.isPro === true;
+  const requirePro = React.useCallback(
+    (onPro: () => void) => {
+      if (isPro) {
+        onPro();
+      } else {
+        // Dynamic import to avoid a circular import with expo-router.
+        const { router } = require('expo-router');
+        router.push('/paywall');
+      }
+    },
+    [isPro]
+  );
+  return { isPro, isLoading, requirePro };
 }
 
 // ─── Goals ───────────────────────────────────────────────

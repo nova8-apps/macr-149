@@ -10,7 +10,7 @@ import { MacroRing } from '@/components/MacroRing';
 import { MealCard } from '@/components/MealCard';
 import { DayStrip } from '@/components/DayStrip';
 import { StreakPill } from '@/components/StreakPill';
-import { useMealsByDate, useStatsSummary, useMe, useDeleteMeal } from '@/lib/api-hooks';
+import { useMealsByDate, useStatsSummary, useMe, useDeleteMeal, useIsPro } from '@/lib/api-hooks';
 import { colors } from '@/lib/theme';
 import { hapticLight, hapticMedium } from '@/lib/haptics';
 
@@ -23,6 +23,7 @@ export default function HomeScreen() {
   const [showActions, setShowActions] = useState<boolean>(false);
 
   const { data: meData } = useMe();
+  const { requirePro } = useIsPro();
   const { data: dayMeals } = useMealsByDate(selectedDate);
   const { data: summary } = useStatsSummary(selectedDate);
   const deleteMealMutation = useDeleteMeal();
@@ -129,7 +130,10 @@ export default function HomeScreen() {
                 onPress={() => {
                   hapticLight();
                   setShowActions(false);
-                  router.push(a.route as any);
+                  // Every scan/log action is Pro-gated. Non-subscribers get
+                  // routed to the paywall via requirePro(). This single hook
+                  // is the only gate point — never branch on isPro inline.
+                  requirePro(() => router.push(a.route as any));
                 }}
                 accessibilityLabel={a.label}
                 testID={`action-${a.label.toLowerCase().replace(/\s+/g, '-')}`}

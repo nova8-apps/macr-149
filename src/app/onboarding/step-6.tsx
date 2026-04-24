@@ -91,12 +91,16 @@ export default function OnboardingStep6() {
       // Wait for the refetch to complete before navigating
       await new Promise(resolve => setTimeout(resolve, 200));
       setOnboarded(true);
-      router.replace('/(tabs)/home');
+      // Route to paywall after onboarding — Macr is a paid app with no
+      // free scans. Users can dismiss the paywall (X button routes back to
+      // /(tabs)/home) and the app will continue to gate scans at the + FAB.
+      router.replace('/paywall');
     } catch (error) {
-      // If API call fails, still proceed to home (goals are optional for preview)
+      // If API call fails, still proceed to the paywall (goals are optional
+      // and the user can retry goal-setting from Settings).
       console.warn('Goals API failed, proceeding anyway:', error);
       setOnboarded(true);
-      router.replace('/(tabs)/home');
+      router.replace('/paywall');
     }
   };
 

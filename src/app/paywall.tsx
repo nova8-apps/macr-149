@@ -95,7 +95,13 @@ export default function PaywallScreen() {
 
   const handleClose = useCallback(() => {
     hapticMedium();
-    router.back();
+    // Always land on home when dismissing the paywall. router.back() is
+    // wrong here because the paywall can be reached from two places —
+    // post-onboarding (router.replace, no back stack to return to) and
+    // from the home FAB's requirePro() gate (back goes to home too).
+    // Non-Pro users are expected to sit on home and see gated features
+    // until they subscribe.
+    router.replace('/(tabs)/home');
   }, []);
 
   const handlePurchase = useCallback(async () => {
