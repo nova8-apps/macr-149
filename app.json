@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nova8.macrolens",
+      "appleTeamId": "YZP4MFJ47H",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses your camera to scan food items and barcodes for nutritional information.",
