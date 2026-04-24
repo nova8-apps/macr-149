@@ -40,15 +40,7 @@
     },
     "plugins": [
       "expo-router",
-      "expo-apple-authentication",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "13.4"
-          }
-        }
-      ]
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true
