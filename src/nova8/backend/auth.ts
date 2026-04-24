@@ -35,7 +35,6 @@ import { Platform } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
-import * as Google from "expo-auth-session/providers/google";
 
 // Wave 3n — single source of truth for API base / project id / project API key.
 // Previously this file had its own private resolvers that only checked the new
@@ -268,100 +267,6 @@ export async function signInWithApple(): Promise<Nova8User> {
 }
 
 // ── Public API — Sign in with Google ─────────────────────────────────────
-
-/**
- * React hook that returns `{ promptAsync, request }` for the Google OAuth
- * flow. You typically call `promptAsync()` from a button handler, then on
- * success pass the returned `idToken` to `completeGoogleSignIn(idToken)`.
- *
- * Client IDs are read from the project's env vars at build time and
- * exposed via `Constants.expoConfig.extra`:
- *   - extra.googleClientIdIos      (required on iOS)
- *   - extra.googleClientIdAndroid  (required on Android)
- *   - extra.googleClientIdWeb      (required on web / Expo Go)
- */
-export function useGoogleSignIn() {
-  const extra = ((Constants.expoConfig as any)?.extra || {}) as Record<string, string>;
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    iosClientId: extra.googleClientIdIos,
-    androidClientId: extra.googleClientIdAndroid,
-    webClientId: extra.googleClientIdWeb,
-    clientId: extra.googleClientIdExpo || extra.googleClientIdWeb,
-  });
-  return { request, response, promptAsync };
-}
-
-/**
- * Exchange a Google ID token for a Nova8 session. Call this after
- * `useGoogleSignIn().promptAsync()` returns a successful response, passing
- * `response.params.id_token`.
- */
-export async function completeGoogleSignIn(idToken: string): Promise<Nova8User> {
-  await hydrate();
-  if (!idToken) {
-    throw new Error("Google didn't return an ID token. Please try again.");
-  }
-
-  // Wave 18.21 — pre-flight check: if no Google client IDs are set, we
-  // already know the backend will reject with google_client_id_missing,
-  // so surface a clear setup message before making the network call.
-  const extra = ((Constants.expoConfig as any)?.extra || {}) as Record<string, string>;
-  const hasAnyGoogleId = Boolean(
-    extra.googleClientIdIos ||
-      extra.googleClientIdAndroid ||
-      extra.googleClientIdWeb ||
-      extra.googleClientIdExpo,
-  );
-  if (!hasAnyGoogleId) {
-    throw new Error(
-      "Google sign-in isn't configured for this app yet. Open the Nova8 Auth tab to paste in your OAuth client IDs.",
-    );
-  }
-
-  const res = await fetch(
-    `${getApiBase()}/api/app/${getProjectId()}/auth/google`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-nova8-project-api-key": getProjectApiKey(),
-      },
-      body: JSON.stringify({ idToken }),
-    },
-  );
-  const data = await res.json().catch(() => ({} as any));
-  if (!res.ok) {
-    // Translate known backend errors into actionable messages the user
-    // can act on without reading logs.
-    if (data?.error === "google_client_id_missing") {
-      throw new Error(
-        "Google sign-in isn't configured for this app yet. Open the Nova8 Auth tab to paste in your OAuth client IDs.",
-      );
-    }
-    if (data?.error && String(data.error).startsWith("google_token_verify_failed")) {
-      throw new Error(
-        "We couldn't verify that Google sign-in. This usually means the iOS/Android/Web client IDs in your Nova8 Auth tab don't match the OAuth client you used to sign in. Double-check them in the Google Cloud Console.",
-      );
-    }
-    throw new Error(data?.message || "Could not complete Google sign-in.");
-  }
-  await persist(data.token, data.user);
-  return data.user;
-}
-
-/**
- * Convenience wrapper: run the full Google flow in one call. Only use this
- * if you don't need to render a custom button — most apps should use
- * `useGoogleSignIn()` from a Pressable's onPress so the system browser
- * trigger comes from a real user gesture.
- */
-export async function signInWithGoogle(): Promise<Nova8User> {
-  throw new Error(
-    "signInWithGoogle() must be called from inside a component using the useGoogleSignIn() hook. " +
-      "Call `const { promptAsync } = useGoogleSignIn();` then `const r = await promptAsync();` " +
-      "and finally `await completeGoogleSignIn(r.params.id_token);`.",
-  );
-}
 
 // ── Public API — session management ──────────────────────────────────────
 
