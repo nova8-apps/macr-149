@@ -38,8 +38,8 @@ import {
   restorePurchases,
   annualMonthlyEquivalent,
   annualSavingsPct,
-  type PaywallPackage,
 } from '@/lib/purchases';
+import type { PaywallPackage } from '@/lib/purchases';
 
 const FEATURES = [
   { icon: Sparkles, label: 'Unlimited AI food scans' },

@@ -17,11 +17,11 @@
  */
 
 import { Platform } from 'react-native';
-import Purchases, {
-  LOG_LEVEL,
-  type CustomerInfo,
-  type PurchasesOffering,
-  type PurchasesPackage,
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import type {
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesPackage,
 } from 'react-native-purchases';
 
 /** Must match the Entitlement identifier set in the RevenueCat dashboard. */
