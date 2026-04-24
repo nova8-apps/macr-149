@@ -370,7 +370,15 @@ const VISION_MEAL_PROMPT = `You are a nutrition analyzer. The user sends a photo
   "aiConfidence": "high" | "low"
 }
 
-If the image is not a meal, return { "meal": { "name": "Unknown", "totalCalories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "items": [] }, "aiConfidence": "low" }.`;
+CRITICAL INSTRUCTIONS:
+
+1. BRANDED PRODUCTS: If you recognize a branded product such as a chocolate bar, protein bar, candy, energy drink, packaged snack, or fast food item, use your training knowledge of that product's actual nutrition label rather than guessing generically. For example, if you see a Hershey's milk chocolate bar, use the real nutrition facts for that specific product.
+
+2. RESTAURANT MEALS: For restaurant meals (Chipotle, McDonald's, Subway, etc.), decompose the meal by component — rice, protein type and portion, toppings, sauces, sides — and estimate each component individually based on typical portion sizes for that restaurant. Then sum the totals. For example, a Chipotle bowl should list: white rice (calories, macros), chicken (portion size in oz, calories, macros), black beans, cheese, sour cream, etc.
+
+3. NEVER RETURN ZERO: If you are uncertain about any value, provide your best estimate based on typical portion sizes and common nutrition knowledge. Never return 0 for totalCalories, proteinG, carbsG, or fatG unless the item genuinely contains zero calories or zero grams of that macronutrient (like plain water or black coffee). A chocolate bar, restaurant meal, or any real food MUST have non-zero values.
+
+4. If the image is clearly not food at all, only then return { "meal": { "name": "Unknown", "totalCalories": 0, "proteinG": 0, "carbsG": 0, "fatG": 0, "items": [] }, "aiConfidence": "low" }.`;
 
 const VISION_LABEL_PROMPT = `You are a nutrition-label reader. The user sends a photo of a nutrition-facts label. Respond with STRICT JSON matching this schema, no prose, no markdown:
 
@@ -418,13 +426,13 @@ export function useVisionAnalyze() {
             role: 'user',
             content: [
               { type: 'text', text: 'Analyze this image.' },
-              { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } },
+              { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
             ],
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.2,
-        max_tokens: 800,
+        temperature: 0,
+        max_tokens: 1200,
       });
       const text = res.choices?.[0]?.message?.content || '';
       const parsed = extractJson(typeof text === 'string' ? text : '');

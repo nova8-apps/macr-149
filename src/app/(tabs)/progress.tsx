@@ -238,7 +238,7 @@ export default function ProgressScreen() {
                   <Activity size={16} color={colors.carbs} />
                   <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary }}>Avg Meals</Text>
                 </View>
-                <Text style={{ fontSize: 28, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 }}>{averages.meals.toFixed(1)}</Text>
+                <Text style={{ fontSize: 28, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 }}>{(averages as any).meals?.toFixed(1) ?? '0.0'}</Text>
                 <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>per day</Text>
               </View>
             </View>
@@ -251,19 +251,19 @@ export default function ProgressScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Calories</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{averages.calories}</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{(averages as any).calories ?? averages.caloriesConsumed}</Text>
                 </View>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Protein</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein }}>{averages.protein}g</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein }}>{(averages as any).protein ?? averages.proteinConsumed}g</Text>
                 </View>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Carbs</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{averages.carbs}g</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{(averages as any).carbs ?? averages.carbsConsumed}g</Text>
                 </View>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Fat</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.fat }}>{averages.fat}g</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.fat }}>{(averages as any).fat ?? averages.fatConsumed}g</Text>
                 </View>
               </View>
             </View>
