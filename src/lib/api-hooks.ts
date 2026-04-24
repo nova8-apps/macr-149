@@ -63,6 +63,33 @@ async function ensureProfile(): Promise<{ goals?: any; streak?: any; entitlement
   return (created.data as any) || {};
 }
 
+// Wave 3o — canonical "has this user already onboarded?" check.
+//
+// The bug this replaces: sign-in screens previously read
+// `(authUser as any).goals.daily_calories`, but Nova8 auth.signIn* returns
+// a plain Nova8User (id/email/name/createdAt) — goals are stored server-side
+// on the `profile` collection, not returned by /auth/signin. The old check
+// was therefore ALWAYS false and every returning user was shoved back into
+// onboarding, which blew away their meal history on each launch.
+//
+// Now: call this right after a successful sign-in. It reads the user's
+// profile doc from the server; if goals.calories is present and > 0 we
+// consider onboarding complete. Safe to call on every sign-in — cheap
+// single-doc read, creates the profile stub if missing.
+export async function hasCompletedOnboarding(): Promise<boolean> {
+  try {
+    const profile = await ensureProfile();
+    const goals = (profile as any)?.goals;
+    const cal = Number(goals?.calories ?? goals?.daily_calories ?? 0);
+    return Number.isFinite(cal) && cal > 0;
+  } catch {
+    // If the profile fetch itself fails, don't assume onboarded — better
+    // to re-run onboarding (idempotent) than to dump them into a broken
+    // home screen with no goals.
+    return false;
+  }
+}
+
 // ─── Auth ────────────────────────────────────────────────
 
 export function loginApi(email: string, password: string) {

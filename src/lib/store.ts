@@ -55,6 +55,15 @@ interface AppStore {
   // Pending meal (transient, for capture → review flow)
   pendingMeal: Partial<Meal> | null;
   setPendingMeal: (meal: Partial<Meal> | null) => void;
+
+  // Wave 3o — async-rehydration gate.
+  // Zustand persist reads AsyncStorage asynchronously after the store is
+  // created. Any component that reads `sessionToken` on first render sees
+  // `null` before rehydration, which makes the splash screen send signed-in
+  // users to /auth/sign-in. We flip this true via onRehydrateStorage once
+  // persisted state is merged. Screens MUST gate navigation on this.
+  _hasHydrated: boolean;
+  _setHasHydrated: (val: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>()(
@@ -79,6 +88,9 @@ export const useAppStore = create<AppStore>()(
       // ─── Pending Meal ─────────────────────
       pendingMeal: null,
       setPendingMeal: (meal) => set({ pendingMeal: meal }),
+
+      _hasHydrated: false,
+      _setHasHydrated: (val) => set({ _hasHydrated: val }),
     }),
     {
       name: 'macr-store',
@@ -89,6 +101,11 @@ export const useAppStore = create<AppStore>()(
         isOnboarded: state.isOnboarded,
         useMetric: state.useMetric,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Fires once after AsyncStorage has been read and merged into state.
+        // Any subscriber of _hasHydrated re-renders with sessionToken set.
+        state?._setHasHydrated(true);
+      },
     }
   )
 );

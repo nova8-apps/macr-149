@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, ActivityIndicator, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Text } from '@/components/ui/text';
@@ -7,13 +7,30 @@ import { useAppStore } from '@/lib/store';
 import { useVisionAnalyze } from '@/lib/api-hooks';
 import { colors } from '@/lib/theme';
 
+// Wave 3o — CRITICAL FIX: infinite-loop OOM crash on capture.
+//
+// The previous version listed `visionMutation` in the useEffect dependency
+// array. TanStack Query returns a NEW mutation object on every render, so
+// the effect re-fired every render. Each fire called `.mutate()` with a
+// large base64 image, which triggered state updates, which re-rendered,
+// which re-fired the effect... until the JS thread was overwhelmed and the
+// app was OOM-killed by iOS.
+//
+// Fix: use a `useRef` boolean that starts `true` (must-run) and flips to
+// `false` after the first invocation, and remove `visionMutation` /
+// `setPendingMeal` from the dep array. The effect now runs exactly once
+// per screen mount, which is the correct semantics for a one-shot analyze.
 export default function AnalyzingScreen() {
   const pendingMeal = useAppStore(s => s.pendingMeal);
   const setPendingMeal = useAppStore(s => s.setPendingMeal);
   const visionMutation = useVisionAnalyze();
   const [error, setError] = useState<string | null>(null);
+  const didRunRef = useRef<boolean>(false);
 
   useEffect(() => {
+    if (didRunRef.current) return;
+    didRunRef.current = true;
+
     const imageBase64 = (pendingMeal as Record<string, unknown> | null)?.imageBase64 as string | undefined;
 
     // Pre-flight guard — no photo captured
@@ -22,7 +39,9 @@ export default function AnalyzingScreen() {
       return;
     }
 
-    // Call real vision API
+    // Call real vision API. We intentionally don't put the mutation in the
+    // dep array because (a) it changes identity every render and (b) we
+    // only ever want this to fire once per mount.
     visionMutation.mutate(
       { imageBase64, mode: 'food' },
       {
@@ -68,7 +87,8 @@ export default function AnalyzingScreen() {
         },
       }
     );
-  }, [pendingMeal, setPendingMeal, visionMutation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (error) {
     return (

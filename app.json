@@ -39,7 +39,8 @@
       "favicon": "./assets/icon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

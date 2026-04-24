@@ -1,17 +1,31 @@
 import React from 'react';
 import { View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { Apple } from 'lucide-react-native';
 import { useAppStore } from '@/lib/store';
 import { colors } from '@/lib/theme';
 
+// Wave 3o — CRITICAL: this screen MUST NOT navigate until the persist
+// middleware has finished reading AsyncStorage. Zustand rehydrates
+// asynchronously after the store is created; on first render
+// `sessionToken` is always `null` even for a signed-in user. Previously
+// we hardcoded a 1400ms setTimeout and hoped rehydration finished first.
+// It usually didn't (especially on cold start / low-end devices), which
+// meant every signed-in user was bounced back to /auth/sign-in and lost
+// their onboarding + meal history on every app launch.
+//
+// Fix: gate navigation on the `_hasHydrated` flag set by
+// `onRehydrateStorage` in src/lib/store.ts. We still honour a minimum
+// splash duration of 900ms so the animation doesn't feel abrupt.
 export default function SplashScreen() {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
   const sessionToken = useAppStore(s => s.sessionToken);
   const isOnboarded = useAppStore(s => s.isOnboarded);
+  const hasHydrated = useAppStore(s => s._hasHydrated);
+  const [minElapsed, setMinElapsed] = React.useState(false);
 
   const animStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -21,20 +35,20 @@ export default function SplashScreen() {
   React.useEffect(() => {
     opacity.value = withTiming(1, { duration: 800 });
     translateY.value = withTiming(0, { duration: 800 });
-
-    const navigate = () => {
-      if (!sessionToken) {
-        router.replace('/auth/sign-in');
-      } else if (!isOnboarded) {
-        router.replace('/onboarding/step-1');
-      } else {
-        router.replace('/(tabs)/home');
-      }
-    };
-
-    const timer = setTimeout(navigate, 1400);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setMinElapsed(true), 900);
+    return () => clearTimeout(t);
   }, []);
+
+  React.useEffect(() => {
+    if (!hasHydrated || !minElapsed) return;
+    if (!sessionToken) {
+      router.replace('/auth/sign-in');
+    } else if (!isOnboarded) {
+      router.replace('/onboarding/step-1');
+    } else {
+      router.replace('/(tabs)/home');
+    }
+  }, [hasHydrated, minElapsed, sessionToken, isOnboarded]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>

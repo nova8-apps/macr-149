@@ -7,7 +7,7 @@ import { Apple, Mail, Lock, User, ArrowLeft } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
-import { signupApi } from '@/lib/api-hooks';
+import { signupApi, hasCompletedOnboarding } from '@/lib/api-hooks';
 import { isAppleAvailable, getToken as getNovaToken } from '@/nova8/backend/auth';
 import { auth } from '@/nova8/backend';
 import { colors } from '@/lib/theme';
@@ -21,6 +21,7 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState<boolean>(false);
   const [appleAvailable, setAppleAvailable] = useState<boolean>(false);
   const setAuth = useAppStore(s => s.setAuth);
+  const setOnboarded = useAppStore(s => s.setOnboarded);
 
   useEffect(() => {
     isAppleAvailable().then(setAppleAvailable);
@@ -61,8 +62,17 @@ export default function SignUpScreen() {
       const user = await auth.signInWithApple();
       const token = await getNovaToken();
       setAuth(user as any, token || '');
+      // Wave 3o — Apple can return either a new or existing identity.
+      // If the user already completed onboarding on a prior install,
+      // send them straight to home instead of re-onboarding them.
+      const onboarded = await hasCompletedOnboarding();
+      setOnboarded(onboarded);
       hapticSuccess();
-      router.replace('/onboarding/step-1');
+      if (onboarded) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.replace('/onboarding/step-1');
+      }
     } catch (err: unknown) {
       if ((err as any)?.code === 'ERR_CANCELED') {
         setError('Sign up cancelled');

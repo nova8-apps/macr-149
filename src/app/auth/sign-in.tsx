@@ -8,7 +8,7 @@ import { Apple, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
-import { loginApi } from '@/lib/api-hooks';
+import { loginApi, hasCompletedOnboarding } from '@/lib/api-hooks';
 import { isAppleAvailable, getToken as getNovaToken } from '@/nova8/backend/auth';
 import { auth } from '@/nova8/backend';
 import { colors } from '@/lib/theme';
@@ -47,15 +47,16 @@ export default function SignInScreen() {
       const token = await getNovaToken();
       setAuth(authUser as any, token || '');
 
-      // Check if the user has completed onboarding by verifying goals have actual calorie values
-      const hasCompletedOnboarding = (authUser as any).goals && typeof (authUser as any).goals.daily_calories === 'number' && (authUser as any).goals.daily_calories > 0;
-
-      if (hasCompletedOnboarding) {
-        setOnboarded(true);
-      }
+      // Wave 3o — auth.signIn* returns a plain Nova8User with no goals
+      // field. Load the user's profile doc from the backend to decide
+      // whether onboarding was already completed. This is the fix for
+      // the Macr 149 bug where every returning user was sent back through
+      // onboarding and lost their meal history on every app launch.
+      const onboarded = await hasCompletedOnboarding();
+      setOnboarded(onboarded);
       hapticSuccess();
 
-      if (hasCompletedOnboarding) {
+      if (onboarded) {
         router.replace('/(tabs)/home');
       } else {
         router.replace('/onboarding/step-1');
@@ -77,14 +78,11 @@ export default function SignInScreen() {
       const token = await getNovaToken();
       setAuth(user as any, token || '');
 
-      const hasCompletedOnboarding = (user as any).goals?.daily_calories > 0;
-
-      if (hasCompletedOnboarding) {
-        setOnboarded(true);
-      }
+      const onboarded = await hasCompletedOnboarding();
+      setOnboarded(onboarded);
       hapticSuccess();
 
-      if (hasCompletedOnboarding) {
+      if (onboarded) {
         router.replace('/(tabs)/home');
       } else {
         router.replace('/onboarding/step-1');
