@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
-import { Apple, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
@@ -109,9 +109,7 @@ export default function SignInScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[logoStyle, { alignItems: 'center', marginBottom: 40 }]}>
-          <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-            <Apple size={32} color="#fff" />
-          </View>
+          <Image source={require('../../../assets/icon.png')} style={{ width: 64, height: 64, borderRadius: 20, marginBottom: 16 }} />
           <Text style={{ fontSize: 28, fontWeight: '800', color: colors.primary, letterSpacing: -0.5 }}>Macr</Text>
           <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>Welcome back</Text>
         </Animated.View>

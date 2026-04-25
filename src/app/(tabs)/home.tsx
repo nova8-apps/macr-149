@@ -52,7 +52,7 @@ export default function HomeScreen() {
     deleteMutation.mutate(id);
   };
 
-  const streak = 7;
+  const streak = me?.streak?.currentStreak ?? 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -99,7 +99,7 @@ export default function HomeScreen() {
               Recently Uploaded
             </Text>
             <View style={{ gap: 10 }}>
-              {meals.slice(0, 5).map((meal: Meal) => (
+              {meals.map((meal: Meal) => (
                 <MealCard
                   key={meal.id}
                   meal={meal}
@@ -108,6 +108,21 @@ export default function HomeScreen() {
                 />
               ))}
             </View>
+            {meals.length > 5 && (
+              <Pressable
+                style={{ marginTop: 8, alignItems: 'center', paddingVertical: 10 }}
+                onPress={() => {
+                  hapticLight();
+                  // Future: navigate to a full history screen
+                }}
+                accessibilityLabel={`View all ${meals.length} meals`}
+                testID="view-all-meals"
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                  {meals.length} meals logged today
+                </Text>
+              </Pressable>
+            )}
           </View>
         )}
 

@@ -27,7 +27,9 @@ export function MealCard({ meal, onPress, onDelete }: MealCardProps) {
   };
 
   const timeStr = React.useMemo(() => {
+    if (!meal.eatenAt) return '';
     const d = new Date(meal.eatenAt);
+    if (isNaN(d.getTime())) return '';
     const h = d.getHours();
     const m = d.getMinutes();
     const ampm = h >= 12 ? 'PM' : 'AM';

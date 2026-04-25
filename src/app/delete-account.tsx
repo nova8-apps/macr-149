@@ -1,7 +1,9 @@
+// HMR nudge 1777085902617
 import React, { useState } from 'react';
 import { View, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Text } from '@/components/ui/text';
 import { AlertTriangle } from 'lucide-react-native';
 import { colors } from '@/lib/theme';
@@ -24,12 +26,14 @@ export default function DeleteAccountScreen() {
   const [busy, setBusy] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const signOut = useAppStore(s => s.signOut);
+  const queryClient = useQueryClient();
 
   const handleDelete = async () => {
     setBusy(true);
     hapticWarning();
     try {
       await deleteAccount();
+      queryClient.clear();
       signOut();
       router.replace('/auth/sign-in');
     } catch (err: any) {

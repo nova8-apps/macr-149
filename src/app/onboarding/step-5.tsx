@@ -23,7 +23,8 @@ export default function OnboardingStep5() {
   const defaultTargetKg = goal === 'lose' ? Math.round(currentWeight - 5) : goal === 'gain' ? Math.round(currentWeight + 5) : Math.round(currentWeight);
   const defaultTargetLb = Math.round(defaultTargetKg * 2.20462);
 
-  const [weightUnit, setWeightUnit] = useState<'kg' | 'lb'>('kg');
+  // Imperial is the default unit system; users can toggle to metric.
+  const [weightUnit, setWeightUnit] = useState<'kg' | 'lb'>('lb');
   const [targetWeightKg, setTargetWeightKg] = useState<string>(String(defaultTargetKg));
   const [targetWeightLb, setTargetWeightLb] = useState<string>(String(defaultTargetLb));
   const [timeline, setTimeline] = useState<string>('6 months');
@@ -87,6 +88,13 @@ export default function OnboardingStep5() {
               value={weightUnit === 'kg' ? targetWeightKg : targetWeightLb}
               onChangeText={weightUnit === 'kg' ? setTargetWeightKg : setTargetWeightLb}
               keyboardType="numeric"
+              autoComplete="off"
+              textContentType="none"
+              autoCorrect={false}
+              spellCheck={false}
+              importantForAutofill="no"
+              selectionColor={colors.primary}
+              cursorColor={colors.primary}
               style={{ fontSize: 48, fontWeight: '800', color: colors.primary, textAlign: 'center', letterSpacing: -1.5 }}
               accessibilityLabel={`Target weight in ${weightUnit === 'kg' ? 'kilograms' : 'pounds'}`}
               testID="target-weight-input"
@@ -120,6 +128,13 @@ export default function OnboardingStep5() {
               value={customMonths}
               onChangeText={setCustomMonths}
               keyboardType="numeric"
+              autoComplete="off"
+              textContentType="none"
+              autoCorrect={false}
+              spellCheck={false}
+              importantForAutofill="no"
+              selectionColor={colors.primary}
+              cursorColor={colors.primary}
               placeholder="e.g., 9"
               placeholderTextColor={colors.textSecondary}
               style={{ fontSize: 32, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' }}

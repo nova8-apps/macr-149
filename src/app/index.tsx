@@ -1,9 +1,8 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Image } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Text } from '@/components/ui/text';
-import { Apple } from 'lucide-react-native';
 import { useAppStore } from '@/lib/store';
 import { colors } from '@/lib/theme';
 
@@ -53,9 +52,7 @@ export default function SplashScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={[animStyle, { alignItems: 'center' }]}>
-        <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-          <Apple size={40} color="#fff" />
-        </View>
+        <Image source={require('../../assets/icon.png')} style={{ width: 80, height: 80, borderRadius: 24, marginBottom: 20 }} />
         <Text style={{ fontSize: 36, fontWeight: '800', color: colors.primary, letterSpacing: -1 }}>Macr</Text>
         <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 6 }}>Point. Snap. Know.</Text>
       </Animated.View>

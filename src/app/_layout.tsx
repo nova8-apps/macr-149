@@ -1,36 +1,33 @@
-// HMR nudge 1776805407650
-import { View } from 'react-native';
-import { Stack } from 'expo-router';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '@/lib/queryClient';
+import '@/global.css';
+import { Slot } from 'expo-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { PreviewErrorReporter } from '@/components/PreviewErrorReporter';
-import { PreviewModeBanner } from '@/components/PreviewModeBanner';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+SplashScreen.preventAutoHideAsync();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 1000 * 60 * 5 },
+  },
+});
 
 export default function RootLayout() {
+  // Hide splash on mount — no custom fonts are required by the app
+  // (the previous SpaceMono load referenced a missing asset and blocked render).
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
-    <PreviewErrorReporter>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <GluestackUIProvider mode="light">
-            <View style={{ flex: 1 }}>
-              <Stack screenOptions={{ headerShown: false, contentStyle: { flex: 1, backgroundColor: '#FFFAF5' } }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="auth/sign-in" />
-                <Stack.Screen name="auth/sign-up" />
-                <Stack.Screen name="onboarding" />
-                <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="delete-account" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="capture" />
-                <Stack.Screen name="exercise" />
-              </Stack>
-              <PreviewModeBanner />
-            </View>
-          </GluestackUIProvider>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </PreviewErrorReporter>
+    <QueryClientProvider client={queryClient}>
+      <GluestackUIProvider mode="light">
+        <SafeAreaProvider>
+          <Slot />
+        </SafeAreaProvider>
+      </GluestackUIProvider>
+    </QueryClientProvider>
   );
 }

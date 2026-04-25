@@ -1,13 +1,16 @@
+// HMR nudge 1777085902617
 import React, { useState } from 'react';
 import { View, Pressable, ScrollView, TextInput, Switch, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
+import { useQueryClient } from '@tanstack/react-query';
 import { Text } from '@/components/ui/text';
 import { User, Target, Ruler, Bell, LogOut, Trash2, ChevronRight, Crown, Scale, Info, Shield, Mail } from 'lucide-react-native';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
 import { useMe, useGoalsMutation, useLogWeight } from '@/lib/api-hooks';
+import { logout } from '@/lib/apiClient';
 import { colors } from '@/lib/theme';
 import { hapticLight, hapticMedium, hapticWarning } from '@/lib/haptics';
 
@@ -39,6 +42,7 @@ export default function SettingsScreen() {
   const useMetric = useAppStore(s => s.useMetric);
   const toggleUnits = useAppStore(s => s.toggleUnits);
   const signOut = useAppStore(s => s.signOut);
+  const queryClient = useQueryClient();
 
   const { data: meData } = useMe();
   const goalsMutation = useGoalsMutation();
@@ -70,16 +74,26 @@ export default function SettingsScreen() {
   const handleLogWeight = () => {
     const w = parseFloat(weightInput);
     if (w > 0) {
-      logWeightMutation.mutate(w);
+      logWeightMutation.mutate({ weightKg: w });
       setShowWeightInput(false);
       hapticLight();
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     hapticWarning();
-    signOut();
-    router.replace('/auth/sign-in');
+    try {
+      await logout();
+      queryClient.clear();
+      signOut();
+      router.replace('/auth/sign-in');
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Even if server call fails, proceed with local sign-out
+      queryClient.clear();
+      signOut();
+      router.replace('/auth/sign-in');
+    }
   };
 
   const handlePrivacyPolicy = () => {
@@ -136,6 +150,13 @@ export default function SettingsScreen() {
                       value={f.val}
                       onChangeText={f.set}
                       keyboardType="numeric"
+                      autoComplete="off"
+                      textContentType="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      importantForAutofill="no"
+                      selectionColor={colors.primary}
+                      cursorColor={colors.primary}
                       style={{ backgroundColor: colors.surfaceElevated, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, fontSize: 15, fontWeight: '700', color: colors.textPrimary, width: 80, textAlign: 'center' }}
                       accessibilityLabel={f.label}
                       testID={`edit-${f.label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -155,7 +176,7 @@ export default function SettingsScreen() {
               <>
                 <SettingRow icon={Target} label="Daily Targets" value={`${goals?.dailyCalories ?? 2000} cal · ${goals?.proteinG ?? 150}P · ${goals?.carbsG ?? 250}C · ${goals?.fatG ?? 65}F`} onPress={() => setEditingGoals(true)} />
                 <View style={{ height: 1, backgroundColor: colors.border }} />
-                <SettingRow icon={Scale} label="Log Weight" value={`Current: ${goals?.currentWeightKg ?? 75} kg`} onPress={() => setShowWeightInput(true)} />
+                <SettingRow icon={Scale} label="Log Weight" value={`Current: ${useMetric ? `${goals?.currentWeightKg ?? 75} kg` : `${Math.round((goals?.currentWeightKg ?? 75) * 2.20462)} lb`}`} onPress={() => setShowWeightInput(true)} />
               </>
             )}
           </View>
@@ -171,6 +192,15 @@ export default function SettingsScreen() {
                   value={weightInput}
                   onChangeText={setWeightInput}
                   keyboardType="numeric"
+                  autoComplete="off"
+                  textContentType="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  importantForAutofill="no"
+                  selectionColor={colors.primary}
+                  cursorColor={colors.primary}
+                  placeholder={useMetric ? 'kg' : 'lb'}
+                  placeholderTextColor={colors.textSecondary}
                   style={{ flex: 1, backgroundColor: colors.surfaceElevated, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, fontWeight: '700', color: colors.textPrimary }}
                   accessibilityLabel="Weight input"
                   testID="log-weight-input"

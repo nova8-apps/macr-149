@@ -102,7 +102,9 @@ export const useAppStore = create<AppStore>()(
       },
 
       // ─── Preferences ─────────────────────
-      useMetric: true,
+      // Imperial (lbs/ft-in) is the default unit system. Users can
+      // switch to metric in Settings → Preferences.
+      useMetric: false,
       toggleUnits: () => set((s) => ({ useMetric: !s.useMetric })),
 
       // ─── Pending Meal ─────────────────────
