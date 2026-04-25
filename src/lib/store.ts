@@ -56,6 +56,13 @@ interface AppStore {
   // Pending meal (transient, for capture → review flow)
   pendingMeal: Partial<Meal> | null;
   setPendingMeal: (meal: Partial<Meal> | null) => void;
+
+  // Hydration gate — src/app/index.tsx (splash) MUST wait on this
+  // before navigating. Without it, the splash reads sessionToken=null
+  // on first render (before AsyncStorage rehydrates) and bounces every
+  // signed-in user back to /auth/sign-in on every cold start.
+  _hasHydrated: boolean;
+  _setHasHydrated: (v: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>()(
@@ -102,6 +109,14 @@ export const useAppStore = create<AppStore>()(
       // ─── Pending Meal ─────────────────────
       pendingMeal: null,
       setPendingMeal: (meal) => set({ pendingMeal: meal }),
+
+      // ─── Hydration flag ───────────────────
+      // Flipped to `true` by `onRehydrateStorage` below once the
+      // persisted slice has been read from AsyncStorage. Consumed by
+      // the splash screen (src/app/index.tsx) so navigation never
+      // runs against a pre-hydrated (all-null) state.
+      _hasHydrated: false,
+      _setHasHydrated: (v: boolean) => set({ _hasHydrated: v }),
     }),
     {
       name: 'macr-store',
@@ -112,6 +127,34 @@ export const useAppStore = create<AppStore>()(
         isOnboarded: state.isOnboarded,
         useMetric: state.useMetric,
       }),
+      // When rehydration finishes (or fails), mark the store as
+      // hydrated so the splash screen can proceed. If it fails we
+      // still flip the flag so the user doesn't get stuck forever —
+      // they'll just land on the signed-out path.
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.warn('[macr-store] rehydrate error', error);
+        }
+        try {
+          useAppStore.getState()._setHasHydrated(true);
+        } catch {}
+      },
     }
   )
 );
+
+// Safety net: if for any reason `onRehydrateStorage` never fires (e.g.
+// AsyncStorage unavailable, native module missing, storage corrupt),
+// flip the hydration flag after a hard timeout so the splash can't
+// freeze indefinitely.
+if (typeof setTimeout !== 'undefined') {
+  setTimeout(() => {
+    try {
+      const s = useAppStore.getState();
+      if (s && s._hasHydrated === false) {
+        s._setHasHydrated(true);
+      }
+    } catch {}
+  }, 2500);
+}
