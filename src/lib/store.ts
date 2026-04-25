@@ -57,10 +57,9 @@ interface AppStore {
   pendingMeal: Partial<Meal> | null;
   setPendingMeal: (meal: Partial<Meal> | null) => void;
 
-  // Hydration gate — src/app/index.tsx (splash) MUST wait on this
-  // before navigating. Without it, the splash reads sessionToken=null
-  // on first render (before AsyncStorage rehydrates) and bounces every
-  // signed-in user back to /auth/sign-in on every cold start.
+  // Hydration gate — Wave 23.2.1. Splash screen waits for this flag
+  // to flip true before navigating, so we never route a "signed-out"
+  // user to sign-in when they actually have a persisted session.
   _hasHydrated: boolean;
   _setHasHydrated: (v: boolean) => void;
 }
@@ -74,32 +73,32 @@ export const useAppStore = create<AppStore>()(
       isOnboarded: false,
 
       setAuth: (user, token) => {
-        // Defensive: if a *different* user is signing in on a device that
-        // still has another user's React Query cache in memory (e.g. fast
-        // account-switch without a clean sign-out), wipe the cache so the
-        // new user never sees the previous user's data.
-        const prev = (useAppStore.getState && useAppStore.getState().user) || null;
-        if (prev && prev.id && user && user.id && prev.id !== user.id) {
-          try { queryClient.clear(); } catch {}
-          try { queryClient.removeQueries(); } catch {}
-        }
+        // Wave 23.2 — if a different user is signing in on the same
+        // device, wipe the previous user's cached React Query data so
+        // it can't leak across accounts.
+        try {
+          const prev = useAppStore.getState().user;
+          if (prev?.id && user?.id && prev.id !== user.id) {
+            try { queryClient.clear(); } catch {}
+            try { queryClient.removeQueries(); } catch {}
+          }
+        } catch {}
         set({ user, sessionToken: token });
       },
       setOnboarded: (val) => set({ isOnboarded: val }),
 
       signOut: () => {
-        // Wipe auth + onboarding + any transient state.
-        set({ user: null, sessionToken: null, isOnboarded: false, pendingMeal: null });
-
-        // CRITICAL: clear React Query cache so Account A's meals / profile /
-        // logs do not bleed into Account B on the next sign-in.
+        set({ user: null, sessionToken: null, isOnboarded: false });
+        // Wave 23.2 — clear React Query cache so next account never
+        // sees this account's data. See src/lib/queryClient.ts.
         try { queryClient.clear(); } catch {}
         try { queryClient.removeQueries(); } catch {}
         try { queryClient.cancelQueries(); } catch {}
-
-        // Belt-and-suspenders: explicitly purge the persisted zustand slice
-        // from AsyncStorage so stale user/token can never rehydrate.
-        try { AsyncStorage.removeItem('macr-store'); } catch {}
+        try {
+          // Best-effort: wipe the persisted slice too, so a hard
+          // refresh also starts from a clean auth state.
+          AsyncStorage.removeItem('macr-store').catch(() => {});
+        } catch {}
       },
 
       // ─── Preferences ─────────────────────
@@ -110,13 +109,9 @@ export const useAppStore = create<AppStore>()(
       pendingMeal: null,
       setPendingMeal: (meal) => set({ pendingMeal: meal }),
 
-      // ─── Hydration flag ───────────────────
-      // Flipped to `true` by `onRehydrateStorage` below once the
-      // persisted slice has been read from AsyncStorage. Consumed by
-      // the splash screen (src/app/index.tsx) so navigation never
-      // runs against a pre-hydrated (all-null) state.
+      // ─── Hydration gate ───────────────────
       _hasHydrated: false,
-      _setHasHydrated: (v: boolean) => set({ _hasHydrated: v }),
+      _setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
     {
       name: 'macr-store',
@@ -127,14 +122,10 @@ export const useAppStore = create<AppStore>()(
         isOnboarded: state.isOnboarded,
         useMetric: state.useMetric,
       }),
-      // When rehydration finishes (or fails), mark the store as
-      // hydrated so the splash screen can proceed. If it fails we
-      // still flip the flag so the user doesn't get stuck forever —
-      // they'll just land on the signed-out path.
       onRehydrateStorage: () => (_state, error) => {
         if (error) {
           // eslint-disable-next-line no-console
-          console.warn('[macr-store] rehydrate error', error);
+          console.warn('[store] rehydrate error:', error);
         }
         try {
           useAppStore.getState()._setHasHydrated(true);
@@ -144,16 +135,14 @@ export const useAppStore = create<AppStore>()(
   )
 );
 
-// Safety net: if for any reason `onRehydrateStorage` never fires (e.g.
-// AsyncStorage unavailable, native module missing, storage corrupt),
-// flip the hydration flag after a hard timeout so the splash can't
-// freeze indefinitely.
+// Safety net — if rehydrate never fires (e.g. storage unavailable in
+// a preview sandbox), flip the hydration flag after 2.5s so the UI
+// can still move past the splash screen instead of hanging forever.
 if (typeof setTimeout !== 'undefined') {
   setTimeout(() => {
     try {
-      const s = useAppStore.getState();
-      if (s && s._hasHydrated === false) {
-        s._setHasHydrated(true);
+      if (!useAppStore.getState()._hasHydrated) {
+        useAppStore.getState()._setHasHydrated(true);
       }
     } catch {}
   }, 2500);

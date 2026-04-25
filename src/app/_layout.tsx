@@ -2,11 +2,11 @@
 import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PreviewErrorReporter } from '@/components/PreviewErrorReporter';
 import { PreviewModeBanner } from '@/components/PreviewModeBanner';
-import { queryClient } from '@/lib/queryClient';
 
 export default function RootLayout() {
   return (
@@ -21,6 +21,7 @@ export default function RootLayout() {
                 <Stack.Screen name="auth/sign-up" />
                 <Stack.Screen name="onboarding" />
                 <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="delete-account" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="capture" />
                 <Stack.Screen name="exercise" />
