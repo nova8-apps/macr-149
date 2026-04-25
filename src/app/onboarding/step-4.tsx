@@ -94,60 +94,69 @@ export default function OnboardingStep4() {
           </View>
           {heightUnit === 'cm' ? (
             <View style={{ alignItems: 'center' }}>
-              <TextInput
-                value={heightCm}
-                onChangeText={setHeightCm}
-                keyboardType="numeric"
-                autoComplete="off"
-                textContentType="none"
-                autoCorrect={false}
-                spellCheck={false}
-                importantForAutofill="no"
-                selectionColor={colors.primary}
-                cursorColor={colors.primary}
-                style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5 }}
-                accessibilityLabel="Height in centimeters"
-                testID="height-input-cm"
-              />
+              {/* @ts-expect-error - importantForAutofill is iOS-only, blocks autofill yellow overlay */}
+              <View importantForAutofill="noExcludeDescendants">
+                <TextInput
+                  value={heightCm}
+                  onChangeText={setHeightCm}
+                  keyboardType="numeric"
+                  autoComplete="off"
+                  textContentType="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  importantForAutofill="no"
+                  selectionColor={colors.primary}
+                  cursorColor={colors.primary}
+                  style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5 }}
+                  accessibilityLabel="Height in centimeters"
+                  testID="height-input-cm"
+                />
+              </View>
               <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>centimeters</Text>
             </View>
           ) : (
             <View style={{ alignItems: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <View style={{ alignItems: 'center' }}>
-                  <TextInput
-                    value={heightFt}
-                    onChangeText={setHeightFt}
-                    keyboardType="numeric"
-                    autoComplete="off"
-                    textContentType="none"
-                    autoCorrect={false}
-                    spellCheck={false}
-                    importantForAutofill="no"
-                    selectionColor={colors.primary}
-                    cursorColor={colors.primary}
-                    style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5, width: 80 }}
-                    accessibilityLabel="Height in feet"
-                    testID="height-input-ft"
-                  />
+                  {/* @ts-expect-error - importantForAutofill is iOS-only, blocks autofill yellow overlay */}
+                  <View importantForAutofill="noExcludeDescendants">
+                    <TextInput
+                      value={heightFt}
+                      onChangeText={setHeightFt}
+                      keyboardType="numeric"
+                      autoComplete="off"
+                      textContentType="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      importantForAutofill="no"
+                      selectionColor={colors.primary}
+                      cursorColor={colors.primary}
+                      style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5, width: 80 }}
+                      accessibilityLabel="Height in feet"
+                      testID="height-input-ft"
+                    />
+                  </View>
                   <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>feet</Text>
                 </View>
                 <View style={{ alignItems: 'center' }}>
-                  <TextInput
-                    value={heightIn}
-                    onChangeText={setHeightIn}
-                    keyboardType="numeric"
-                    autoComplete="off"
-                    textContentType="none"
-                    autoCorrect={false}
-                    spellCheck={false}
-                    importantForAutofill="no"
-                    selectionColor={colors.primary}
-                    cursorColor={colors.primary}
-                    style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5, width: 80 }}
-                    accessibilityLabel="Height in inches"
-                    testID="height-input-in"
-                  />
+                  {/* @ts-expect-error - importantForAutofill is iOS-only, blocks autofill yellow overlay */}
+                  <View importantForAutofill="noExcludeDescendants">
+                    <TextInput
+                      value={heightIn}
+                      onChangeText={setHeightIn}
+                      keyboardType="numeric"
+                      autoComplete="off"
+                      textContentType="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                      importantForAutofill="no"
+                      selectionColor={colors.primary}
+                      cursorColor={colors.primary}
+                      style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5, width: 80 }}
+                      accessibilityLabel="Height in inches"
+                      testID="height-input-in"
+                    />
+                  </View>
                   <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>inches</Text>
                 </View>
               </View>
@@ -173,21 +182,24 @@ export default function OnboardingStep4() {
             </Pressable>
           </View>
           <View style={{ alignItems: 'center' }}>
-            <TextInput
-              value={weightUnit === 'kg' ? weightKg : weightLb}
-              onChangeText={weightUnit === 'kg' ? setWeightKg : setWeightLb}
-              keyboardType="numeric"
-              autoComplete="off"
-              textContentType="none"
-              autoCorrect={false}
-              spellCheck={false}
-              importantForAutofill="no"
-              selectionColor={colors.primary}
-              cursorColor={colors.primary}
-              style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5 }}
-              accessibilityLabel={`Weight in ${weightUnit === 'kg' ? 'kilograms' : 'pounds'}`}
-              testID="weight-input"
-            />
+            {/* @ts-expect-error - importantForAutofill is iOS-only, blocks autofill yellow overlay */}
+            <View importantForAutofill="noExcludeDescendants">
+              <TextInput
+                value={weightUnit === 'kg' ? weightKg : weightLb}
+                onChangeText={weightUnit === 'kg' ? setWeightKg : setWeightLb}
+                keyboardType="numeric"
+                autoComplete="off"
+                textContentType="none"
+                autoCorrect={false}
+                spellCheck={false}
+                importantForAutofill="no"
+                selectionColor={colors.primary}
+                cursorColor={colors.primary}
+                style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', letterSpacing: -1.5 }}
+                accessibilityLabel={`Weight in ${weightUnit === 'kg' ? 'kilograms' : 'pounds'}`}
+                testID="weight-input"
+              />
+            </View>
             <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>{weightUnit === 'kg' ? 'kilograms' : 'pounds'}</Text>
           </View>
         </View>

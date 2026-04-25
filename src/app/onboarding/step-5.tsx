@@ -84,21 +84,24 @@ export default function OnboardingStep5() {
             </Pressable>
           </View>
           <View style={{ alignItems: 'center' }}>
-            <TextInput
-              value={weightUnit === 'kg' ? targetWeightKg : targetWeightLb}
-              onChangeText={weightUnit === 'kg' ? setTargetWeightKg : setTargetWeightLb}
-              keyboardType="numeric"
-              autoComplete="off"
-              textContentType="none"
-              autoCorrect={false}
-              spellCheck={false}
-              importantForAutofill="no"
-              selectionColor={colors.primary}
-              cursorColor={colors.primary}
-              style={{ fontSize: 48, fontWeight: '800', color: colors.primary, textAlign: 'center', letterSpacing: -1.5 }}
-              accessibilityLabel={`Target weight in ${weightUnit === 'kg' ? 'kilograms' : 'pounds'}`}
-              testID="target-weight-input"
-            />
+            {/* @ts-expect-error - importantForAutofill is iOS-only, blocks autofill yellow overlay */}
+            <View importantForAutofill="noExcludeDescendants">
+              <TextInput
+                value={weightUnit === 'kg' ? targetWeightKg : targetWeightLb}
+                onChangeText={weightUnit === 'kg' ? setTargetWeightKg : setTargetWeightLb}
+                keyboardType="numeric"
+                autoComplete="off"
+                textContentType="none"
+                autoCorrect={false}
+                spellCheck={false}
+                importantForAutofill="no"
+                selectionColor={colors.primary}
+                cursorColor={colors.primary}
+                style={{ fontSize: 48, fontWeight: '800', color: colors.primary, textAlign: 'center', letterSpacing: -1.5 }}
+                accessibilityLabel={`Target weight in ${weightUnit === 'kg' ? 'kilograms' : 'pounds'}`}
+                testID="target-weight-input"
+              />
+            </View>
             <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>{weightUnit === 'kg' ? 'kilograms' : 'pounds'}</Text>
           </View>
         </View>
@@ -124,23 +127,26 @@ export default function OnboardingStep5() {
         {timeline === 'custom' && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 8 }}>Custom timeline (months)</Text>
-            <TextInput
-              value={customMonths}
-              onChangeText={setCustomMonths}
-              keyboardType="numeric"
-              autoComplete="off"
-              textContentType="none"
-              autoCorrect={false}
-              spellCheck={false}
-              importantForAutofill="no"
-              selectionColor={colors.primary}
-              cursorColor={colors.primary}
-              placeholder="e.g., 9"
-              placeholderTextColor={colors.textSecondary}
-              style={{ fontSize: 32, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' }}
-              accessibilityLabel="Custom timeline in months"
-              testID="custom-months-input"
-            />
+            {/* @ts-expect-error - importantForAutofill is iOS-only, blocks autofill yellow overlay */}
+            <View importantForAutofill="noExcludeDescendants">
+              <TextInput
+                value={customMonths}
+                onChangeText={setCustomMonths}
+                keyboardType="numeric"
+                autoComplete="off"
+                textContentType="none"
+                autoCorrect={false}
+                spellCheck={false}
+                importantForAutofill="no"
+                selectionColor={colors.primary}
+                cursorColor={colors.primary}
+                placeholder="e.g., 9"
+                placeholderTextColor={colors.textSecondary}
+                style={{ fontSize: 32, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' }}
+                accessibilityLabel="Custom timeline in months"
+                testID="custom-months-input"
+              />
+            </View>
           </View>
         )}
       </ScrollView>

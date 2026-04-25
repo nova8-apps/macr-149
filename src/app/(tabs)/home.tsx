@@ -157,8 +157,7 @@ export default function HomeScreen() {
           setMenuOpen(true);
         }}
         accessibilityLabel="Add meal"
-        testID="fab-add-meal"
-      >
+        testID="fab-add-meal" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Plus size={20} color="#fff" />
       </Pressable>
 

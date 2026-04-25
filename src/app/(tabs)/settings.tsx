@@ -1,5 +1,5 @@
 // HMR nudge 1777085902617
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Pressable, ScrollView, TextInput, Switch, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -58,7 +58,20 @@ export default function SettingsScreen() {
   const [editFat, setEditFat] = useState<string>(String(goals?.fatG ?? 65));
 
   const [showWeightInput, setShowWeightInput] = useState<boolean>(false);
-  const [weightInput, setWeightInput] = useState<string>(String(goals?.currentWeightKg ?? 75));
+  const [weightInput, setWeightInput] = useState<string>(
+    useMetric
+      ? String(goals?.currentWeightKg ?? 75)
+      : String(Math.round((goals?.currentWeightKg ?? 75) * 2.20462))
+  );
+
+  // Reset weight input when goals change or units toggle
+  useEffect(() => {
+    if (useMetric) {
+      setWeightInput(String(goals?.currentWeightKg ?? 75));
+    } else {
+      setWeightInput(String(Math.round((goals?.currentWeightKg ?? 75) * 2.20462)));
+    }
+  }, [goals?.currentWeightKg, useMetric]);
 
   const handleSaveGoals = () => {
     goalsMutation.mutate({
@@ -74,7 +87,8 @@ export default function SettingsScreen() {
   const handleLogWeight = () => {
     const w = parseFloat(weightInput);
     if (w > 0) {
-      logWeightMutation.mutate({ weightKg: w });
+      const weightKg = useMetric ? w : w / 2.20462;
+      logWeightMutation.mutate({ weightKg });
       setShowWeightInput(false);
       hapticLight();
     }
@@ -188,23 +202,26 @@ export default function SettingsScreen() {
             <View style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 10 }}>Log Today's Weight</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput
-                  value={weightInput}
-                  onChangeText={setWeightInput}
-                  keyboardType="numeric"
-                  autoComplete="off"
-                  textContentType="none"
-                  autoCorrect={false}
-                  spellCheck={false}
-                  importantForAutofill="no"
-                  selectionColor={colors.primary}
-                  cursorColor={colors.primary}
-                  placeholder={useMetric ? 'kg' : 'lb'}
-                  placeholderTextColor={colors.textSecondary}
-                  style={{ flex: 1, backgroundColor: colors.surfaceElevated, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, fontWeight: '700', color: colors.textPrimary }}
-                  accessibilityLabel="Weight input"
-                  testID="log-weight-input"
-                />
+                {/* @ts-expect-error - importantForAutofill is iOS-only, blocks autofill yellow overlay */}
+                <View importantForAutofill="noExcludeDescendants" style={{ flex: 1 }}>
+                  <TextInput
+                    value={weightInput}
+                    onChangeText={setWeightInput}
+                    keyboardType="numeric"
+                    autoComplete="off"
+                    textContentType="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    importantForAutofill="no"
+                    selectionColor={colors.primary}
+                    cursorColor={colors.primary}
+                    placeholder={useMetric ? 'Enter weight in kg' : 'Enter weight in lb'}
+                    placeholderTextColor={colors.textSecondary}
+                    style={{ flex: 1, backgroundColor: colors.surfaceElevated, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, fontWeight: '700', color: colors.textPrimary }}
+                    accessibilityLabel="Weight input"
+                    testID="log-weight-input"
+                  />
+                </View>
                 <Pressable onPress={handleLogWeight} accessibilityLabel="Save weight" testID="save-weight" style={{ backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 20, justifyContent: 'center' }}>
                   <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>Save</Text>
                 </Pressable>
