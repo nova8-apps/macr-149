@@ -81,7 +81,7 @@ export async function hasCompletedOnboarding(): Promise<boolean> {
   try {
     const profile = await ensureProfile();
     const goals = (profile as any)?.goals;
-    const cal = Number(goals?.calories ?? goals?.daily_calories ?? 0);
+    const cal = Number(goals?.dailyCalories ?? goals?.calories ?? goals?.daily_calories ?? 0);
     return Number.isFinite(cal) && cal > 0;
   } catch {
     // If the profile fetch itself fails, don't assume onboarded — better

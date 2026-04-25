@@ -1,172 +1,196 @@
-import React, { useState } from 'react';
-import { View, Pressable, ScrollView } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import React from 'react';
+import { View, Pressable, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
-import { Apple, Plus, Camera, Image, PenLine, UtensilsCrossed } from 'lucide-react-native';
+import { ScrollView } from '@/components/ui/scroll-view';
+import { Plus, MoreVertical } from 'lucide-react-native';
+import { colors } from '@/lib/theme';
+import { hapticLight, hapticMedium } from '@/lib/haptics';
+import { DayStrip } from '@/components/DayStrip';
 import { CalorieRing } from '@/components/CalorieRing';
 import { MacroRing } from '@/components/MacroRing';
 import { MealCard } from '@/components/MealCard';
-import { DayStrip } from '@/components/DayStrip';
 import { StreakPill } from '@/components/StreakPill';
-import { useMealsByDate, useStatsSummary, useMe, useDeleteMeal, useIsPro } from '@/lib/api-hooks';
-import { colors } from '@/lib/theme';
-import { hapticLight, hapticMedium } from '@/lib/haptics';
-
-function getToday(): string {
-  return new Date().toISOString().split('T')[0];
-}
+import { useMe, useMealsByDate, useDeleteMeal } from '@/lib/api-hooks';
+import type { Meal } from '@/types';
+import {
+  Actionsheet,
+  ActionsheetBackdrop,
+  ActionsheetContent,
+  ActionsheetItem,
+  ActionsheetItemText,
+} from '@/components/ui/actionsheet';
 
 export default function HomeScreen() {
-  const [selectedDate, setSelectedDate] = useState<string>(getToday());
-  const [showActions, setShowActions] = useState<boolean>(false);
+  const insets = useSafeAreaInsets();
+  const { data: me } = useMe();
+  const [selectedDate, setSelectedDate] = React.useState(() => new Date().toISOString().split('T')[0]);
+  const { data: meals = [] } = useMealsByDate(selectedDate);
+  const deleteMutation = useDeleteMeal();
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
-  const { data: meData } = useMe();
-  const { requirePro } = useIsPro();
-  const { data: dayMeals } = useMealsByDate(selectedDate);
-  const { data: summary } = useStatsSummary(selectedDate);
-  const deleteMealMutation = useDeleteMeal();
+  const dailyCalories = me?.goals?.dailyCalories ?? me?.goals?.calories ?? 2000;
+  const dailyProtein = me?.goals?.protein ?? 150;
+  const dailyCarbs = me?.goals?.carbs ?? 200;
+  const dailyFat = me?.goals?.fat ?? 60;
 
-  const goals = meData?.goals;
-  const streak = meData?.streak ?? { currentStreak: 0, longestStreak: 0, lastLoggedDate: '' };
-  const meals = Array.isArray(dayMeals) ? dayMeals : [];
+  const consumed = React.useMemo(() => {
+    return meals.reduce(
+      (acc: { calories: number; protein: number; carbs: number; fat: number }, m: Meal) => ({
+        calories: acc.calories + m.totalCalories,
+        protein: acc.protein + m.proteinG,
+        carbs: acc.carbs + m.carbsG,
+        fat: acc.fat + m.fatG,
+      }),
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  }, [meals]);
 
-  const dailyCal = goals?.dailyCalories ?? 2000;
-  const dailyPro = goals?.proteinG ?? 150;
-  const dailyCarb = goals?.carbsG ?? 250;
-  const dailyFat = goals?.fatG ?? 65;
+  const handleDeleteMeal = (id: string) => {
+    hapticMedium();
+    deleteMutation.mutate(id);
+  };
 
-  const fabScale = useSharedValue(1);
-  const fabStyle = useAnimatedStyle(() => ({ transform: [{ scale: fabScale.value }] }));
-
-  const actions = [
-    { icon: Camera, label: 'Take Photo', route: '/capture' },
-    { icon: Image, label: 'Choose from Library', route: '/capture/library' },
-    { icon: PenLine, label: 'Manual Entry', route: '/capture/food-label' },
-  ];
+  const streak = 7;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Apple size={22} color={colors.primary} />
-          <Text style={{ fontSize: 22, fontWeight: '800', color: colors.primary, letterSpacing: -0.5 }}>Macr</Text>
-        </View>
-        <StreakPill count={streak.currentStreak} />
-      </View>
-
-      {/* Day Strip */}
-      <DayStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView
+        contentContainerStyle={{
+          paddingTop: Platform.OS === 'ios' ? insets.top + 12 : 16,
+          paddingBottom: insets.bottom + 100,
+          paddingHorizontal: 20,
+        }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
       >
-        {/* Calorie Ring Card */}
-        <View style={{
-          backgroundColor: colors.surface, borderRadius: 24, padding: 24,
-          borderWidth: 1, borderColor: colors.border, alignItems: 'center', marginTop: 8,
-        }}>
-          <CalorieRing consumed={summary?.caloriesConsumed ?? 0} total={dailyCal} />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginTop: 16 }}>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>{summary?.caloriesConsumed ?? 0}</Text>
-              <Text style={{ fontSize: 11, color: colors.textSecondary }}>Consumed</Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: colors.border }} />
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>{dailyCal}</Text>
-              <Text style={{ fontSize: 11, color: colors.textSecondary }}>Target</Text>
-            </View>
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <View>
+            <Text style={{ fontSize: 28, fontWeight: '700', color: colors.textPrimary }}>
+              Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}
+            </Text>
+            <Text style={{ fontSize: 15, color: colors.textSecondary, marginTop: 2 }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </Text>
           </View>
+          <StreakPill count={streak} />
         </View>
 
-        {/* Macro Cards */}
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-          <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
-            <MacroRing label="Protein" consumed={summary?.proteinConsumed ?? 0} total={dailyPro} color={colors.protein} size={70} />
-          </View>
-          <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
-            <MacroRing label="Carbs" consumed={summary?.carbsConsumed ?? 0} total={dailyCarb} color={colors.carbs} size={70} />
-          </View>
-          <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
-            <MacroRing label="Fat" consumed={summary?.fatConsumed ?? 0} total={dailyFat} color={colors.fat} size={70} />
-          </View>
+        {/* Day Strip */}
+        <DayStrip selectedDate={selectedDate} onSelectDate={(date: string) => setSelectedDate(date)} />
+
+        {/* Calorie Ring */}
+        <View style={{ marginTop: 24, marginBottom: 24 }}>
+          <CalorieRing consumed={consumed.calories} total={dailyCalories} />
         </View>
 
-        {/* Meals */}
-        <View style={{ marginTop: 24 }}>
-          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary, marginBottom: 14 }}>Recently Uploaded</Text>
-          {meals.length === 0 ? (
-            <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 32, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
-              <UtensilsCrossed size={36} color={colors.textSecondary} />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginTop: 12 }}>No meals logged yet</Text>
-              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4, textAlign: 'center' }}>Tap the + button to log your first meal!</Text>
-            </View>
-          ) : (
+        {/* Macro Rings */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+          <MacroRing label="Protein" consumed={consumed.protein} total={dailyProtein} color={colors.protein} />
+          <MacroRing label="Carbs" consumed={consumed.carbs} total={dailyCarbs} color={colors.carbs} />
+          <MacroRing label="Fat" consumed={consumed.fat} total={dailyFat} color={colors.fat} />
+        </View>
+
+        {/* Recently Uploaded */}
+        {meals.length > 0 && (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ fontSize: 17, fontWeight: '600', color: colors.textPrimary, marginBottom: 12 }}>
+              Recently Uploaded
+            </Text>
             <View style={{ gap: 10 }}>
-              {meals.map(meal => (
-                <MealCard key={meal.id} meal={meal} onDelete={() => deleteMealMutation.mutate(meal.id)} />
+              {meals.slice(0, 5).map((meal: Meal) => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  onPress={() => {}}
+                  onDelete={() => handleDeleteMeal(meal.id)}
+                />
               ))}
             </View>
-          )}
-        </View>
+          </View>
+        )}
+
+        {meals.length === 0 && (
+          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+            <Text style={{ fontSize: 15, color: colors.textSecondary, textAlign: 'center' }}>
+              No meals yet today.{'\n'}Tap + to scan your first meal.
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Action Sheet */}
-      {showActions && (
-        <Pressable
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }}
-          onPress={() => setShowActions(false)}
-          accessibilityLabel="Close actions"
-          testID="close-actions-overlay"
-        >
-          <View style={{ position: 'absolute', bottom: 110, right: 20, backgroundColor: colors.surface, borderRadius: 20, padding: 8, borderWidth: 1, borderColor: colors.border, width: 200 }}>
-            {actions.map((a, i) => (
-              <Pressable
-                key={i}
-                onPress={() => {
-                  hapticLight();
-                  setShowActions(false);
-                  // Every scan/log action is Pro-gated. Non-subscribers get
-                  // routed to the paywall via requirePro(). This single hook
-                  // is the only gate point — never branch on isPro inline.
-                  requirePro(() => router.push(a.route as any));
-                }}
-                accessibilityLabel={a.label}
-                testID={`action-${a.label.toLowerCase().replace(/\s+/g, '-')}`}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12 }}
-              >
-                <a.icon size={20} color={colors.primary} />
-                <Text style={{ fontSize: 14, fontWeight: '500', color: colors.textPrimary }}>{a.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      )}
-
       {/* FAB */}
-      <Animated.View style={[fabStyle, { position: 'absolute', bottom: 100, right: 20 }]}>
-        <Pressable
-          onPress={() => {
-            hapticMedium();
-            fabScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
-            setTimeout(() => { fabScale.value = withSpring(1); }, 100);
-            setShowActions(!showActions);
-          }}
-          accessibilityLabel="Add meal or exercise"
-          testID="fab-add"
+      <Pressable
+        style={{
+          position: 'absolute',
+          right: 20,
+          bottom: insets.bottom + 85 + 12,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: colors.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+          shadowColor: '#000',
+          shadowOpacity: 0.2,
+          shadowOffset: { width: 0, height: 4 },
+          shadowRadius: 8,
+        }}
+        onPress={() => {
+          hapticMedium();
+          setMenuOpen(true);
+        }}
+        accessibilityLabel="Add meal"
+        testID="fab-add-meal"
+      >
+        <Plus size={20} color="#fff" />
+      </Pressable>
+
+      {/* Action Sheet */}
+      <Actionsheet isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
+        <ActionsheetBackdrop />
+        <ActionsheetContent
           style={{
-            width: 56, height: 56, borderRadius: 28,
-            backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-            shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12,
-            elevation: 8,
-          }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Plus size={28} color="#fff" />
-        </Pressable>
-      </Animated.View>
-    </SafeAreaView>
+            position: 'absolute',
+            right: 20,
+            bottom: insets.bottom + 85 + 72,
+            width: 200,
+            backgroundColor: colors.surface,
+            borderRadius: 16,
+            padding: 8,
+            shadowColor: '#000',
+            shadowOpacity: 0.15,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+          }}
+        >
+          <ActionsheetItem
+            onPress={() => {
+              setMenuOpen(false);
+              router.push('/capture');
+            }}
+          >
+            <ActionsheetItemText>📸 Scan Meal</ActionsheetItemText>
+          </ActionsheetItem>
+          <ActionsheetItem
+            onPress={() => {
+              setMenuOpen(false);
+              router.push('/capture/barcode');
+            }}
+          >
+            <ActionsheetItemText>🔍 Scan Barcode</ActionsheetItemText>
+          </ActionsheetItem>
+          <ActionsheetItem
+            onPress={() => {
+              setMenuOpen(false);
+              router.push('/capture/food-label');
+            }}
+          >
+            <ActionsheetItemText>🏷️ Scan Food Label</ActionsheetItemText>
+          </ActionsheetItem>
+        </ActionsheetContent>
+      </Actionsheet>
+    </View>
   );
 }

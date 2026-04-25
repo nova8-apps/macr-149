@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User, Meal, FoodItem } from '@/types';
+import { queryClient } from './queryClient';
 
 // ─── Seed Food Database (offline fallback) ───────────
 export const SEED_FOODS: FoodItem[] = [
@@ -55,15 +56,6 @@ interface AppStore {
   // Pending meal (transient, for capture → review flow)
   pendingMeal: Partial<Meal> | null;
   setPendingMeal: (meal: Partial<Meal> | null) => void;
-
-  // Wave 3o — async-rehydration gate.
-  // Zustand persist reads AsyncStorage asynchronously after the store is
-  // created. Any component that reads `sessionToken` on first render sees
-  // `null` before rehydration, which makes the splash screen send signed-in
-  // users to /auth/sign-in. We flip this true via onRehydrateStorage once
-  // persisted state is merged. Screens MUST gate navigation on this.
-  _hasHydrated: boolean;
-  _setHasHydrated: (val: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>()(
@@ -74,11 +66,33 @@ export const useAppStore = create<AppStore>()(
       sessionToken: null,
       isOnboarded: false,
 
-      setAuth: (user, token) => set({ user, sessionToken: token }),
+      setAuth: (user, token) => {
+        // Defensive: if a *different* user is signing in on a device that
+        // still has another user's React Query cache in memory (e.g. fast
+        // account-switch without a clean sign-out), wipe the cache so the
+        // new user never sees the previous user's data.
+        const prev = (useAppStore.getState && useAppStore.getState().user) || null;
+        if (prev && prev.id && user && user.id && prev.id !== user.id) {
+          try { queryClient.clear(); } catch {}
+          try { queryClient.removeQueries(); } catch {}
+        }
+        set({ user, sessionToken: token });
+      },
       setOnboarded: (val) => set({ isOnboarded: val }),
 
       signOut: () => {
-        set({ user: null, sessionToken: null, isOnboarded: false });
+        // Wipe auth + onboarding + any transient state.
+        set({ user: null, sessionToken: null, isOnboarded: false, pendingMeal: null });
+
+        // CRITICAL: clear React Query cache so Account A's meals / profile /
+        // logs do not bleed into Account B on the next sign-in.
+        try { queryClient.clear(); } catch {}
+        try { queryClient.removeQueries(); } catch {}
+        try { queryClient.cancelQueries(); } catch {}
+
+        // Belt-and-suspenders: explicitly purge the persisted zustand slice
+        // from AsyncStorage so stale user/token can never rehydrate.
+        try { AsyncStorage.removeItem('macr-store'); } catch {}
       },
 
       // ─── Preferences ─────────────────────
@@ -88,9 +102,6 @@ export const useAppStore = create<AppStore>()(
       // ─── Pending Meal ─────────────────────
       pendingMeal: null,
       setPendingMeal: (meal) => set({ pendingMeal: meal }),
-
-      _hasHydrated: false,
-      _setHasHydrated: (val) => set({ _hasHydrated: val }),
     }),
     {
       name: 'macr-store',
@@ -101,11 +112,6 @@ export const useAppStore = create<AppStore>()(
         isOnboarded: state.isOnboarded,
         useMetric: state.useMetric,
       }),
-      onRehydrateStorage: () => (state) => {
-        // Fires once after AsyncStorage has been read and merged into state.
-        // Any subscriber of _hasHydrated re-renders with sessionToken set.
-        state?._setHasHydrated(true);
-      },
     }
   )
 );

@@ -13,6 +13,7 @@ import { isAppleAvailable, getToken as getNovaToken } from '@/nova8/backend/auth
 import { auth } from '@/nova8/backend';
 import { colors } from '@/lib/theme';
 import { hapticMedium, hapticSuccess } from '@/lib/haptics';
+
 export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string>('');
@@ -155,7 +156,7 @@ export default function SignInScreen() {
             </Pressable>
           </View>
 
-          <PillButton title="Sign In" onPress={handleSignIn} loading={loading} fullWidth />
+          <PillButton title="Sign In" onPress={handleSignIn} loading={loading} fullWidth variant="dark" />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20 }}>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />

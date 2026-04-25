@@ -175,7 +175,7 @@ export default function PaywallScreen() {
         );
       } else {
         hapticWarning();
-        Alert.alert('Restore failed', result.error || 'Could not restore purchases. Please try again.');
+        Alert.alert('Restore failed', (!result.ok ? result.error : null) || 'Could not restore purchases. Please try again.');
       }
     } finally {
       setRestoring(false);
