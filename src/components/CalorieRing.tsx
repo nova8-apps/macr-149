@@ -13,9 +13,13 @@ interface CalorieRingProps {
   size?: number;
   strokeWidth?: number;
   showLabel?: boolean;
+  // Wave 23.35.4 — when the user's goals haven't loaded yet, render a
+  // neutral placeholder (“—”) instead of a misleading default like 0 or
+  // 2000. The ring itself stays empty until real data arrives.
+  loading?: boolean;
 }
 
-export function CalorieRing({ consumed, total, size = 200, strokeWidth = 14, showLabel = true }: CalorieRingProps) {
+export function CalorieRing({ consumed, total, size = 200, strokeWidth = 14, showLabel = true, loading = false }: CalorieRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.min(consumed / Math.max(total, 1), 1);
@@ -62,11 +66,11 @@ export function CalorieRing({ consumed, total, size = 200, strokeWidth = 14, sho
       </Svg>
       {showLabel && (
         <View style={{ position: 'absolute', alignItems: 'center' }}>
-          <Text style={{ fontSize: 40, fontWeight: '800', color: colors.textPrimary, letterSpacing: -1.5 }}>
-            {remaining}
+          <Text style={{ fontSize: 40, fontWeight: '800', color: loading ? colors.textSecondary : colors.textPrimary, letterSpacing: -1.5 }}>
+            {loading ? '—' : remaining}
           </Text>
           <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginTop: -4 }}>
-            Calories left
+            {loading ? 'Loading…' : 'Calories left'}
           </Text>
         </View>
       )}

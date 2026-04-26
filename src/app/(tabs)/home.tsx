@@ -18,18 +18,24 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { data: me } = useMe();
+  const { data: me, isLoading: meLoading } = useMe();
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const { data: meals = [] } = useMealsByDate(selectedDate);
   const [menuOpen, setMenuOpen] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
-  // Derive goals from the me object
+  // Wave 23.35.4 — never flash a hardcoded default before the user's real
+  // goals load. We treat `me` as "resolved" only once the query has finished
+  // its first fetch AND we have a `goals` object on it. Until then we render
+  // the calorie ring at 0/0 (the empty state) so users never see the wrong
+  // number, and the (tabs) layout's onboarding redirect handles users who
+  // genuinely have no goals.
   const goals = me?.goals;
-  const dailyCalories = goals?.dailyCalories ?? 2000;
-  const dailyProtein = goals?.proteinG ?? 150;
-  const dailyCarbs = goals?.carbsG ?? 250;
-  const dailyFat = goals?.fatG ?? 65;
+  const goalsReady = !!goals && !meLoading;
+  const dailyCalories = goalsReady ? (goals!.dailyCalories ?? 0) : 0;
+  const dailyProtein = goalsReady ? (goals!.proteinG ?? 0) : 0;
+  const dailyCarbs = goalsReady ? (goals!.carbsG ?? 0) : 0;
+  const dailyFat = goalsReady ? (goals!.fatG ?? 0) : 0;
 
   // Calculate consumed totals from meals
   const consumed = meals.reduce(
@@ -93,7 +99,7 @@ export default function HomeScreen() {
             elevation: 2,
           }}
         >
-          <CalorieRing consumed={consumed.calories} total={dailyCalories} />
+          <CalorieRing consumed={consumed.calories} total={dailyCalories} loading={!goalsReady} />
           <View
             style={{
               height: 1,
@@ -104,9 +110,9 @@ export default function HomeScreen() {
             }}
           />
           <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-around' }}>
-            <MacroRing label="Protein" consumed={consumed.protein} total={dailyProtein} color={colors.protein} />
-            <MacroRing label="Carbs" consumed={consumed.carbs} total={dailyCarbs} color={colors.carbs} />
-            <MacroRing label="Fat" consumed={consumed.fat} total={dailyFat} color={colors.fat} />
+            <MacroRing label="Protein" consumed={consumed.protein} total={dailyProtein} color={colors.protein} loading={!goalsReady} />
+            <MacroRing label="Carbs" consumed={consumed.carbs} total={dailyCarbs} color={colors.carbs} loading={!goalsReady} />
+            <MacroRing label="Fat" consumed={consumed.fat} total={dailyFat} color={colors.fat} loading={!goalsReady} />
           </View>
         </View>
 

@@ -13,9 +13,11 @@ interface MacroRingProps {
   total: number;
   color: string;
   size?: number;
+  // Wave 23.35.4 — same loading-state treatment as CalorieRing.
+  loading?: boolean;
 }
 
-export function MacroRing({ label, consumed, total, color, size = 80 }: MacroRingProps) {
+export function MacroRing({ label, consumed, total, color, size = 80, loading = false }: MacroRingProps) {
   const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -57,10 +59,10 @@ export function MacroRing({ label, consumed, total, color, size = 80 }: MacroRin
           />
         </Svg>
         <View style={{ position: 'absolute', alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
-            {remaining}
+          <Text style={{ fontSize: 18, fontWeight: '700', color: loading ? colors.textSecondary : colors.textPrimary }}>
+            {loading ? '—' : remaining}
           </Text>
-          <Text style={{ fontSize: 9, color: colors.textSecondary, marginTop: -2 }}>g left</Text>
+          <Text style={{ fontSize: 9, color: colors.textSecondary, marginTop: -2 }}>{loading ? '…' : 'g left'}</Text>
         </View>
       </View>
       <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginTop: 6 }}>{label}</Text>
