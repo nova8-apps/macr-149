@@ -56,6 +56,15 @@
       "projectId": 149,
       "projectApiKey": "nv8pk_WzlqCANDB0SnXkoKucr6pZ8AcEiIaYlzYRzqC7ng624",
       "privacyPolicyUrl": "https://nova8.dev/privacy/149"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/[REPLACE_AFTER_FIRST_BUILD]",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     }
   }
 }
