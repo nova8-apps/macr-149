@@ -1,19 +1,20 @@
 import '@/global.css';
 import { Slot } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Purchases from 'react-native-purchases';
 
-SplashScreen.preventAutoHideAsync();
+// Wave 23.35.5 — use the SAME QueryClient singleton that api-hooks.ts
+// imperatively writes to. Previously _layout.tsx created its own client,
+// so every `queryClient.setQueriesData(...)` from useSaveMeal/useDeleteMeal
+// updated a cache no React component was reading from — meals saved fine
+// but the home screen never showed them until a sign-out/sign-in cycle.
+import { queryClient } from '@/lib/queryClient';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, staleTime: 1000 * 60 * 5 },
-  },
-});
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   // Wave 23.13 — RevenueCat configuration (auto-generated).
