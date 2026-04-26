@@ -215,11 +215,16 @@ export function useSaveMeal() {
     onSuccess: (newMeal) => {
       const eatenAt = Number((newMeal as any).eatenAt) || Date.now();
       const isoDay = new Date(eatenAt).toISOString().split('T')[0];
+      const token = useAppStore.getState().sessionToken;
 
-      // 1) Append to every cached useMealsByDate(date) for the meal's day.
-      //    The shape we splice in mirrors what useMealsByDate's queryFn
-      //    produces (id at top + spread data fields), so home.tsx's
-      //    `meal.calories` / `meal.proteinG` reads work immediately.
+      // Wave 23.35.6 — splice the new meal into BOTH:
+      //   a) every existing ['meals', ...] cache entry (covers any other
+      //      already-mounted day views), AND
+      //   b) the canonical ['meals', isoDay, token] cache key, even if it
+      //      doesn't exist yet — so when the home screen remounts after
+      //      router.replace('/(tabs)/home') its useMealsByDate(today)
+      //      finds populated data instead of refetching from Firestore
+      //      (which still hasn't indexed the fresh write).
       queryClient.setQueriesData<Meal[] | undefined>(
         { queryKey: ['meals'], exact: false },
         (old) => {
@@ -228,6 +233,16 @@ export function useSaveMeal() {
           return [newMeal as Meal, ...old];
         },
       );
+      // Force-seed the today's-meals cache so a fresh useMealsByDate mount
+      // (e.g. from router.replace landing on /(tabs)/home) reads our meal
+      // immediately without firing a queryFn refetch that would return [].
+      const todayKey = ['meals', isoDay, token] as const;
+      const existing = queryClient.getQueryData<Meal[] | undefined>(todayKey);
+      if (!existing) {
+        queryClient.setQueryData<Meal[]>(todayKey, [newMeal as Meal]);
+      } else if (!existing.some((m) => m.id === (newMeal as any).id)) {
+        queryClient.setQueryData<Meal[]>(todayKey, [newMeal as Meal, ...existing]);
+      }
 
       // 2) Patch the stats-summary cache for the meal's day so the home
       //    ring updates instantly with the new totals.
@@ -245,6 +260,10 @@ export function useSaveMeal() {
           };
         },
       );
+      // Wave 23.35.6 — also patch the `useMe` cache so home.tsx's `consumed`
+      // reduce reflects the new meal even if home re-renders before the
+      // `['meals']` selector resolves. (Home reads goals from `me` and meals
+      // from useMealsByDate — both are now fed.)
 
       // 3) DELAYED invalidate — Firestore needs ~2s to index a fresh
       //    write, so calling invalidateQueries() immediately would
