@@ -3,6 +3,9 @@ export interface User {
   email: string;
   name: string;
   createdAt: string;
+  goals?: UserGoals;
+  streak?: Streak;
+  entitlement?: Entitlement;
 }
 
 export interface UserGoals {
@@ -25,8 +28,11 @@ export interface MealItem {
   name: string;
   calories: number;
   proteinG: number;
+  protein?: number;
   carbsG: number;
+  carbs?: number;
   fatG: number;
+  fat?: number;
   quantity: number;
   unit: string;
 }
@@ -35,10 +41,16 @@ export interface Meal {
   id: string;
   name: string;
   photoUrl?: string;
+  imageBase64?: string;
   totalCalories: number;
+  calories?: number;
   proteinG: number;
+  protein?: number;
   carbsG: number;
+  carbs?: number;
   fatG: number;
+  fat?: number;
+  aiConfidence?: number;
   items: MealItem[];
   eatenAt: string;
   createdAt: string;

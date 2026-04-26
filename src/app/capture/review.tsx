@@ -1,108 +1,74 @@
-import React, { useState, useMemo } from 'react';
-import { View, Pressable, ScrollView, TextInput } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import React, { useState } from 'react';
+import { View, Pressable, Image, ScrollView } from 'react-native';
 import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
-import { ArrowLeft, Share2, Pencil, Flame, Trash2, Plus, Check, AlertCircle } from 'lucide-react-native';
-import { PillButton } from '@/components/PillButton';
-import { useAppStore } from '@/lib/store';
-import { useCreateMeal } from '@/lib/api-hooks';
+import { ArrowLeft, Check, AlertCircle } from 'lucide-react-native';
 import { colors } from '@/lib/theme';
-import { hapticLight, hapticSuccess, hapticMedium } from '@/lib/haptics';
-import type { MealItem } from '@/types';
+import { hapticMedium } from '@/lib/haptics';
+import { useAppStore } from '@/lib/store';
+import { useSaveMeal } from '@/lib/api-hooks';
 
 export default function ReviewScreen() {
   const pendingMeal = useAppStore(s => s.pendingMeal);
-  const setPendingMeal = useAppStore(s => s.setPendingMeal);
-  const createMealMutation = useCreateMeal();
-
-  const aiConfidence = (pendingMeal as any)?.aiConfidence;
-  const [mealName, setMealName] = useState<string>(pendingMeal?.name ?? 'New Meal');
-  const [editing, setEditing] = useState<boolean>(false);
-  const [items, setItems] = useState<MealItem[]>((pendingMeal?.items ?? []) as MealItem[]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const clearPendingMeal = useAppStore(s => s.clearPendingMeal);
+  const { mutateAsync: saveMeal, isPending: isSaving } = useSaveMeal();
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const totals = useMemo(() => ({
-    calories: items.reduce((s, i) => s + (i.calories ?? 0), 0),
-    protein: items.reduce((s, i) => s + (i.proteinG ?? 0), 0),
-    carbs: items.reduce((s, i) => s + (i.carbsG ?? 0), 0),
-    fat: items.reduce((s, i) => s + (i.fatG ?? 0), 0),
-  }), [items]);
+  if (!pendingMeal) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: colors.text, textAlign: 'center' }}>No meal to review</Text>
+        <Pressable
+          onPress={() => router.replace('/(tabs)/home')}
+          style={{ marginTop: 16, paddingVertical: 12 }}
+          accessibilityLabel="Go to home"
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary }}>Go to Home</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
-  const deleteItem = (id: string) => {
-    hapticLight();
-    setItems(prev => prev.filter(i => i.id !== id));
-  };
+  const { name, calories, protein, carbs, fat, items, photoUrl, aiConfidence } = pendingMeal;
 
   const handleSave = async () => {
-    const trimmedName = mealName.trim();
-    if (!trimmedName) {
-      setSaveError('Please enter a meal name');
-      return;
-    }
-    if (items.length === 0) {
-      setSaveError('Add at least one item before saving');
-      return;
-    }
-    setSaveError(null);
-    setLoading(true);
     hapticMedium();
-
-    createMealMutation.mutate(
-      {
-        name: mealName,
-        photoUrl: pendingMeal?.photoUrl ?? undefined,
-        totalCalories: totals.calories,
-        proteinG: totals.protein,
-        carbsG: totals.carbs,
-        fatG: totals.fat,
-        items: items.map(i => ({
-          name: i.name,
-          calories: i.calories,
-          proteinG: i.proteinG,
-          carbsG: i.carbsG,
-          fatG: i.fatG,
-          quantity: i.quantity,
-          unit: i.unit,
-        })),
-        eatenAt: pendingMeal?.eatenAt ?? new Date().toISOString(),
-      },
-      {
-        onSuccess: () => {
-          hapticSuccess();
-          setPendingMeal(null);
-          setLoading(false);
-          router.replace('/(tabs)/home');
-        },
-        onError: (err: any) => {
-          console.error('[review] create meal failed:', err);
-          setLoading(false);
-          const status = err?.status as number | undefined;
-          const msg = typeof err?.message === 'string' ? err.message : '';
-          if (status === 401 || /No signed-in user|Not signed in|token/i.test(msg)) {
-            setSaveError('Please sign in again to save meals');
-          } else if (status === 429) {
-            setSaveError('Too many saves today — try again later');
-          } else {
-            setSaveError('Could not save meal — please try again');
-          }
-        },
-      }
-    );
+    setSaveError(null);
+    try {
+      await saveMeal({
+        name: name || 'Meal',
+        calories: calories || 0,
+        protein: protein || 0,
+        carbs: carbs || 0,
+        fat: fat || 0,
+        eatenAt: new Date().toISOString(),
+        photoUrl,
+        items,
+      });
+      clearPendingMeal();
+      router.replace('/(tabs)/home');
+    } catch (err: any) {
+      console.error('[review] save error:', err);
+      setSaveError('Failed to save meal — please try again');
+    }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 }}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Go back" testID="review-back" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <ArrowLeft size={20} color={colors.textPrimary} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityLabel="Go back"
+          testID="review-back"
+          style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <ArrowLeft size={20} color={colors.text} />
         </Pressable>
-        <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>Create Meal</Text>
-        <Pressable accessibilityLabel="Share" testID="review-share" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Share2 size={18} color={colors.textSecondary} />
-        </Pressable>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: colors.text }}>Review Meal</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       {saveError ? (
@@ -111,104 +77,83 @@ export default function ReviewScreen() {
         </View>
       ) : null}
 
+      {aiConfidence === 'low' && !saveError ? (
+        <View style={{ marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FEF3C7', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <AlertCircle size={14} color="#D97706" />
+          <Text style={{ color: '#D97706', fontSize: 12, fontWeight: '500', flex: 1 }}>Estimates may vary — tap any item to edit</Text>
+        </View>
+      ) : null}
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}>
-        {/* Meal Name */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 20 }}>
-          {editing ? (
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceElevated, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.border }}>
-              <TextInput
-                value={mealName}
-                onChangeText={setMealName}
-                style={{ flex: 1, fontSize: 18, fontWeight: '700', color: colors.textPrimary }}
-                autoFocus
-                accessibilityLabel="Edit meal name"
-                testID="meal-name-input"
-              />
-              <Pressable onPress={() => setEditing(false)} accessibilityLabel="Done editing" testID="done-editing" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Check size={20} color={colors.primary} />
-              </Pressable>
+        {/* Photo */}
+        {photoUrl ? (
+          <View style={{ marginTop: 16, borderRadius: 16, overflow: 'hidden', aspectRatio: 4 / 3, backgroundColor: colors.surface }}>
+            <Image source={{ uri: photoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          </View>
+        ) : null}
+
+        {/* Meal name */}
+        <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginTop: 20 }}>{name || 'Meal'}</Text>
+
+        {/* Macros summary */}
+        <View style={{ marginTop: 16, backgroundColor: colors.surface, borderRadius: 16, padding: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>CALORIES</Text>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{calories || 0}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>PROTEIN</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{protein || 0}g</Text>
             </View>
-          ) : (
-            <>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: colors.textPrimary, flex: 1 }}>{mealName}</Text>
-              <Pressable onPress={() => setEditing(true)} accessibilityLabel="Edit meal name" testID="edit-name">
-                <Pencil size={18} color={colors.textSecondary} />
-              </Pressable>
-            </>
-          )}
-        </View>
-
-        {/* Calories Card */}
-        <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: colors.border, alignItems: 'center', marginBottom: 16 }}>
-          <Flame size={24} color={colors.primary} />
-          <Text style={{ fontSize: 48, fontWeight: '800', color: colors.textPrimary, letterSpacing: -2, marginTop: 4 }}>{totals.calories ?? 0}</Text>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary }}>Calories</Text>
-          {aiConfidence === 'low' && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, backgroundColor: '#FEF3C7', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
-              <AlertCircle size={12} color="#D97706" />
-              <Text style={{ fontSize: 11, fontWeight: '500', color: '#D97706' }}>Estimate may be less accurate</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>CARBS</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{carbs || 0}g</Text>
             </View>
-          )}
-        </View>
-
-        {/* Macro Chips */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-          <View style={{ flex: 1, backgroundColor: `${colors.protein}15`, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein }}>{totals.protein ?? 0}g</Text>
-            <Text style={{ fontSize: 11, color: colors.protein, fontWeight: '500' }}>Protein</Text>
-          </View>
-          <View style={{ flex: 1, backgroundColor: `${colors.carbs}15`, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{totals.carbs ?? 0}g</Text>
-            <Text style={{ fontSize: 11, color: colors.carbs, fontWeight: '500' }}>Carbs</Text>
-          </View>
-          <View style={{ flex: 1, backgroundColor: `${colors.fat}15`, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.fat }}>{totals.fat ?? 0}g</Text>
-            <Text style={{ fontSize: 11, color: colors.fat, fontWeight: '500' }}>Fat</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>FAT</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{fat || 0}g</Text>
+            </View>
           </View>
         </View>
 
-        {/* Meal Items */}
-        <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>Meal Items</Text>
-        {items.length === 0 ? (
-          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-            <Text style={{ fontSize: 14, color: colors.textSecondary }}>No items yet — add items to build your meal</Text>
-          </View>
-        ) : (
-          items.map(item => (
-            <View key={item.id} style={{
-              flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
-              borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8,
-            }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textPrimary }}>{item.name}</Text>
-                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{item.quantity ?? 1}{item.unit} · {item.calories ?? 0} kcal</Text>
+        {/* Items breakdown */}
+        {items && items.length > 0 ? (
+          <View style={{ marginTop: 20 }}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 12 }}>Items</Text>
+            {items.map((item, idx) => (
+              <View key={idx} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, flex: 1 }}>{item.name}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{item.calories} cal</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>P: {item.protein ?? item.proteinG}g</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>C: {item.carbs ?? item.carbsG}g</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>F: {item.fat ?? item.fatG}g</Text>
+                </View>
               </View>
-              <Pressable onPress={() => deleteItem(item.id)} accessibilityLabel={`Delete ${item.name}`} testID={`delete-item-${item.id}`} style={{ padding: 8 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Trash2 size={16} color="#E05555" />
-              </Pressable>
-            </View>
-          ))
-        )}
-
-        {/* Add items */}
-        <Pressable
-          onPress={() => { hapticLight(); router.push('/capture/library'); }}
-          accessibilityLabel="Add items to meal"
-          testID="add-items"
-          style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-            borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed',
-            borderRadius: 16, paddingVertical: 14, marginTop: 4,
-          }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Plus size={18} color={colors.textSecondary} />
-          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary }}>Add items to this meal</Text>
-        </Pressable>
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
 
-      {/* Bottom CTA */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.bg, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36, borderTopWidth: 1, borderTopColor: colors.border }}>
-        <PillButton title="Create Meal" onPress={handleSave} variant="dark" loading={loading} fullWidth />
+      {/* Save button */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 20, paddingVertical: 16 }}>
+        <Pressable
+          onPress={handleSave}
+          disabled={isSaving}
+          accessibilityLabel="Save meal"
+          testID="save-meal-button"
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+            backgroundColor: colors.primary, borderRadius: 999,
+            paddingVertical: 16, opacity: isSaving ? 0.6 : 1,
+          }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Check size={20} color="#fff" />
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>{isSaving ? 'Saving...' : 'Save Meal'}</Text>
+        </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

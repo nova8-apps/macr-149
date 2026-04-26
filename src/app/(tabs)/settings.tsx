@@ -75,11 +75,12 @@ export default function SettingsScreen() {
 
   const handleSaveGoals = () => {
     goalsMutation.mutate({
-      calorieTarget: parseInt(editCal) || 2000,
-      proteinTarget: parseInt(editPro) || 150,
-      carbTarget: parseInt(editCarb) || 250,
-      fatTarget: parseInt(editFat) || 65,
-    });
+      ...(goals || {}),
+      dailyCalories: parseInt(editCal) || 2000,
+      proteinG: parseInt(editPro) || 150,
+      carbsG: parseInt(editCarb) || 250,
+      fatG: parseInt(editFat) || 65,
+    } as UserGoals);
     setEditingGoals(false);
     hapticLight();
   };
@@ -88,7 +89,7 @@ export default function SettingsScreen() {
     const w = parseFloat(weightInput);
     if (w > 0) {
       const weightKg = useMetric ? w : w / 2.20462;
-      logWeightMutation.mutate({ weightKg });
+      logWeightMutation.mutate(weightKg);
       setShowWeightInput(false);
       hapticLight();
     }

@@ -75,7 +75,7 @@ async function forward(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
     },
     body: JSON.stringify(body),
@@ -260,7 +260,7 @@ export async function audioSpeech(body: {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
     },
     body: JSON.stringify(body),
@@ -288,7 +288,7 @@ export async function audioTranscriptions(formData: FormData): Promise<{
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
       // Do NOT set Content-Type manually — fetch computes the multipart
       // boundary automatically when you pass a FormData body.
@@ -320,7 +320,7 @@ export async function getUsage(): Promise<{
   const url = `${getApiBase()}/api/app/${getProjectId()}/proxy/usage`;
   const res = await fetch(url, {
     headers: {
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
     },
   });

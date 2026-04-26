@@ -121,7 +121,7 @@ async function refreshFromServer(): Promise<void> {
     const res = await fetch(`${getApiBase()}/api/app/${getProjectId()}/auth/me`, {
       headers: {
         "x-nova8-app-token": cachedToken,
-        "x-nova8-project-api-key": getProjectApiKey(),
+        "x-nova8-project-key": getProjectApiKey(),
       },
     });
     if (res.status === 401) {
@@ -158,7 +158,7 @@ export async function signUpWithEmail(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-nova8-project-api-key": getProjectApiKey(),
+        "x-nova8-project-key": getProjectApiKey(),
       },
       body: JSON.stringify({ email, password, name }),
     },
@@ -182,7 +182,7 @@ export async function signInWithEmail(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-nova8-project-api-key": getProjectApiKey(),
+        "x-nova8-project-key": getProjectApiKey(),
       },
       body: JSON.stringify({ email, password }),
     },
@@ -245,7 +245,7 @@ export async function signInWithApple(): Promise<Nova8User> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-nova8-project-api-key": getProjectApiKey(),
+        "x-nova8-project-key": getProjectApiKey(),
       },
       body: JSON.stringify({
         identityToken: credential.identityToken,
@@ -278,7 +278,7 @@ export async function signOut(): Promise<void> {
       method: "POST",
       headers: {
         "x-nova8-app-token": cachedToken,
-        "x-nova8-project-api-key": getProjectApiKey(),
+        "x-nova8-project-key": getProjectApiKey(),
       },
     }).catch(() => {});
   }
@@ -313,7 +313,7 @@ export async function deleteAccount(): Promise<void> {
     method: "DELETE",
     headers: {
       "x-nova8-app-token": cachedToken,
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
     },
   });
   if (!res.ok) {

@@ -81,23 +81,23 @@ export default function HomeScreen() {
         <DayStrip selectedDate={selectedDate} onSelectDate={(date: string) => setSelectedDate(date)} />
 
         {/* Calorie Ring */}
-        <View style={{ marginTop: 24, marginBottom: 24 }}>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 24, borderWidth: 1, borderColor: colors.border, padding: 20, alignItems: 'center', marginTop: 12, marginBottom: 16 }}>
           <CalorieRing consumed={consumed.calories} total={dailyCalories} />
         </View>
 
         {/* Macro Rings */}
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 24, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: 'row', gap: 12, marginBottom: 24 }}>
           <MacroRing label="Protein" consumed={consumed.protein} total={dailyProtein} color={colors.protein} />
           <MacroRing label="Carbs" consumed={consumed.carbs} total={dailyCarbs} color={colors.carbs} />
           <MacroRing label="Fat" consumed={consumed.fat} total={dailyFat} color={colors.fat} />
         </View>
 
-        {/* Recently Uploaded */}
-        {meals.length > 0 && (
-          <View style={{ marginBottom: 12 }}>
-            <Text style={{ fontSize: 17, fontWeight: '600', color: colors.textPrimary, marginBottom: 12 }}>
-              Recently Uploaded
-            </Text>
+        {/* Today's Meals */}
+        <View style={{ marginBottom: 12 }}>
+          <Text style={{ fontSize: 17, fontWeight: '600', color: colors.textPrimary, marginBottom: 12 }}>
+            Today's Meals
+          </Text>
+          {meals.length > 0 && (
             <View style={{ gap: 10 }}>
               {meals.map((meal: Meal) => (
                 <MealCard
@@ -108,6 +108,12 @@ export default function HomeScreen() {
                 />
               ))}
             </View>
+          )}
+        </View>
+
+        {meals.length > 0 && (
+          <View>
+            {/* Placeholder for view-all link */}
             {meals.length > 5 && (
               <Pressable
                 style={{ marginTop: 8, alignItems: 'center', paddingVertical: 10 }}

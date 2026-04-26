@@ -7,7 +7,7 @@
  * user B's files.
  *
  * Auth (dual-header, auto-wired):
- *   x-nova8-project-api-key : public key from expo.extra.nova8ProjectApiKey
+ *   x-nova8-project-key : public key from expo.extra.nova8ProjectApiKey
  *   x-nova8-app-token       : end-user session token from @nova8/backend/auth
  *
  * Caps (shared with other storage calls on this project):
@@ -67,7 +67,7 @@ async function request<T>(
     method,
     headers: {
       "Content-Type": "application/json",
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

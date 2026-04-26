@@ -56,6 +56,7 @@ interface AppStore {
   // Pending meal (transient, for capture → review flow)
   pendingMeal: Partial<Meal> | null;
   setPendingMeal: (meal: Partial<Meal> | null) => void;
+  clearPendingMeal: () => void;
 
   // Hydration gate — Wave 23.2.1. Splash screen waits for this flag
   // to flip true before navigating, so we never route a "signed-out"
@@ -110,6 +111,7 @@ export const useAppStore = create<AppStore>()(
       // ─── Pending Meal ─────────────────────
       pendingMeal: null,
       setPendingMeal: (meal) => set({ pendingMeal: meal }),
+      clearPendingMeal: () => set({ pendingMeal: null }),
 
       // ─── Hydration gate ───────────────────
       _hasHydrated: false,

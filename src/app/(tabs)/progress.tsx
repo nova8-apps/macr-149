@@ -93,7 +93,7 @@ export default function ProgressScreen() {
 
     if (activeTab === 'Week') {
       // Show last 7 days with real data
-      return trends.slice(-7).map((t, i) => ({
+      return trends.slice(-7).map((t: { date: string; caloriesConsumed: number }, i: number) => ({
         label: labels[i] || new Date(t.date).getDate().toString(),
         value: t.caloriesConsumed,
       }));
@@ -103,7 +103,7 @@ export default function ProgressScreen() {
       for (let w = 0; w < 4; w++) {
         const weekData = trends.slice(w * 7, (w + 1) * 7);
         const avgCal = weekData.length > 0
-          ? weekData.reduce((s, d) => s + d.caloriesConsumed, 0) / weekData.length
+          ? weekData.reduce((s: number, d: { caloriesConsumed: number }) => s + d.caloriesConsumed, 0) / weekData.length
           : 0;
         weeks.push({ label: `W${w + 1}`, value: Math.round(avgCal) });
       }
@@ -114,7 +114,7 @@ export default function ProgressScreen() {
       for (let w = 0; w < 12; w++) {
         const weekData = trends.slice(w * 7, (w + 1) * 7);
         const avgCal = weekData.length > 0
-          ? weekData.reduce((s, d) => s + d.caloriesConsumed, 0) / weekData.length
+          ? weekData.reduce((s: number, d: { caloriesConsumed: number }) => s + d.caloriesConsumed, 0) / weekData.length
           : 0;
         if (weekData.length > 0) {
           const firstDay = new Date(weekData[0].date);
@@ -147,7 +147,7 @@ export default function ProgressScreen() {
     const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     if (activeTab === 'Week') {
-      return trends.slice(-7).map((t, i) => ({
+      return trends.slice(-7).map((t: { date: string; proteinConsumed: number; carbsConsumed: number; fatConsumed: number }, i: number) => ({
         label: labels[i] || new Date(t.date).getDate().toString(),
         protein: t.proteinConsumed,
         carbs: t.carbsConsumed,
@@ -160,9 +160,9 @@ export default function ProgressScreen() {
       for (let w = 0; w < weeksCount; w++) {
         const weekData = trends.slice(w * 7, (w + 1) * 7);
         if (weekData.length === 0) continue;
-        const avgPro = weekData.reduce((s, d) => s + d.proteinConsumed, 0) / weekData.length;
-        const avgCarb = weekData.reduce((s, d) => s + d.carbsConsumed, 0) / weekData.length;
-        const avgFat = weekData.reduce((s, d) => s + d.fatConsumed, 0) / weekData.length;
+        const avgPro = weekData.reduce((s: number, d: { proteinConsumed: number }) => s + d.proteinConsumed, 0) / weekData.length;
+        const avgCarb = weekData.reduce((s: number, d: { carbsConsumed: number }) => s + d.carbsConsumed, 0) / weekData.length;
+        const avgFat = weekData.reduce((s: number, d: { fatConsumed: number }) => s + d.fatConsumed, 0) / weekData.length;
         weeks.push({
           label: activeTab === 'Month' ? `W${w + 1}` : `${new Date(weekData[0].date).getMonth() + 1}/${new Date(weekData[0].date).getDate()}`,
           protein: Math.round(avgPro),
@@ -174,7 +174,7 @@ export default function ProgressScreen() {
     }
   }, [activeTab, trends]);
 
-  const hasData = trends.length > 0 && trends.some(t => t.caloriesConsumed > 0);
+  const hasData = trends.length > 0 && trends.some((t: { caloriesConsumed: number }) => t.caloriesConsumed > 0);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
@@ -300,7 +300,7 @@ export default function ProgressScreen() {
           {hasData ? (
             <View>
               <Svg width={CHART_W} height={CHART_H + 30}>
-                {macroData.map((d, i) => {
+                {macroData.map((d: { label: string; protein: number; carbs: number; fat: number }, i: number) => {
                   const barW = Math.min(28, (CHART_W - 20) / macroData.length - 6);
                   const x = 10 + i * ((CHART_W - 20) / macroData.length) + ((CHART_W - 20) / macroData.length - barW) / 2;
                   const total = d.protein + d.carbs + d.fat;

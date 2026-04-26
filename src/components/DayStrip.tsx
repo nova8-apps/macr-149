@@ -31,7 +31,7 @@ export function DayStrip({ selectedDate, onSelectDate }: DayStripProps) {
   }, []);
 
   return (
-    <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 12 }}>
+    <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 12 }}>
       {days.map((day) => {
         const isSelected = day.date === selectedDate;
         return (

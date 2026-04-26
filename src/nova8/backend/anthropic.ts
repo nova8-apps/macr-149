@@ -42,7 +42,7 @@ async function forward(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
     },
     body: JSON.stringify(body),
@@ -133,7 +133,7 @@ export async function getUsage(): Promise<{
   const url = `${getApiBase()}/api/app/${getProjectId()}/proxy/usage`;
   const res = await fetch(url, {
     headers: {
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
     },
   });

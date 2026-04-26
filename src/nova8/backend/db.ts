@@ -7,7 +7,7 @@
  * delete user B's documents, even with a guessed document ID.
  *
  * Auth (dual-header, auto-wired):
- *   x-nova8-project-api-key : public key from expo.extra.nova8ProjectApiKey
+ *   x-nova8-project-key : public key from expo.extra.nova8ProjectApiKey
  *   x-nova8-app-token       : end-user session token from @nova8/backend/auth
  *
  * Caps (shared with other db calls on this project):
@@ -76,7 +76,7 @@ async function request<T>(
     method,
     headers: {
       "Content-Type": "application/json",
-      "x-nova8-project-api-key": getProjectApiKey(),
+      "x-nova8-project-key": getProjectApiKey(),
       "x-nova8-app-token": token,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
