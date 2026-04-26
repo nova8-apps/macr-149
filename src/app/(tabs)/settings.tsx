@@ -74,13 +74,14 @@ export default function SettingsScreen() {
   }, [goals?.currentWeightKg, useMetric]);
 
   const handleSaveGoals = () => {
+    if (!goals) return;
     goalsMutation.mutate({
-      ...(goals || {}),
+      ...goals,
       dailyCalories: parseInt(editCal) || 2000,
       proteinG: parseInt(editPro) || 150,
       carbsG: parseInt(editCarb) || 250,
       fatG: parseInt(editFat) || 65,
-    } as UserGoals);
+    });
     setEditingGoals(false);
     hapticLight();
   };

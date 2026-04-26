@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,7 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
-import { loginApi, hasCompletedOnboarding } from '@/lib/api-hooks';
+import { hasCompletedOnboarding } from '@/lib/api-hooks';
 import { isAppleAvailable, getToken as getNovaToken } from '@/nova8/backend/auth';
 import { auth } from '@/nova8/backend';
 import { colors } from '@/lib/theme';
@@ -44,9 +44,9 @@ export default function SignInScreen() {
     hapticMedium();
 
     try {
-      const authUser = await loginApi(email.trim(), password);
+      const user = await auth.signInWithEmail(email.trim(), password);
       const token = await getNovaToken();
-      setAuth(authUser as any, token || '');
+      setAuth(user as any, token || '');
 
       // Wave 3o — auth.signIn* returns a plain Nova8User with no goals
       // field. Load the user's profile doc from the backend to decide
@@ -109,7 +109,7 @@ export default function SignInScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[logoStyle, { alignItems: 'center', marginBottom: 40 }]}>
-          <Image source={require('../../../assets/icon.png')} style={{ width: 64, height: 64, borderRadius: 20, marginBottom: 16 }} />
+          <View style={{ width: 64, height: 64, borderRadius: 20, marginBottom: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF', letterSpacing: -1 }}>M</Text></View>
           <Text style={{ fontSize: 28, fontWeight: '800', color: colors.primary, letterSpacing: -0.5 }}>Macr</Text>
           <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>Welcome back</Text>
         </Animated.View>

@@ -55,22 +55,20 @@ async function apiCall<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 // ─── Auth Hooks ────────────────────────────────────────────
 
-export async function signupApi(email: string, password: string, name: string): Promise<{ token: string; user: User }> {
-  return apiCall<{ token: string; user: User }>('/api/app/149/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify({ email, password, name }),
-  });
-}
-
-export async function loginApi(email: string, password: string): Promise<{ token: string; user: User }> {
-  return apiCall<{ token: string; user: User }>('/api/app/149/auth/signin', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  });
-}
+// Deleted loginApi and signupApi — replaced with @/nova8/backend/auth module
 
 export async function hasCompletedOnboarding(): Promise<boolean> {
-  return useAppStore.getState().isOnboarded;
+  const token = useAppStore.getState().sessionToken;
+  if (!token) return false;
+
+  try {
+    const data = await apiCall<{ user: User }>('/api/app/149/auth/me');
+    // User completed onboarding if they have a daily calorie goal set
+    const goals = data.user?.goals as any;
+    return !!(goals?.daily_calories || goals?.dailyCalories);
+  } catch {
+    return false;
+  }
 }
 
 export function useMe() {
@@ -80,6 +78,18 @@ export function useMe() {
     queryFn: async () => {
       if (!token) return null;
       const data = await apiCall<{ user: User }>('/api/app/149/auth/me');
+
+      // Normalize goals field names from snake_case to camelCase
+      if (data.user?.goals) {
+        const g = data.user.goals as any;
+        data.user.goals = {
+          dailyCalories: g.dailyCalories ?? g.daily_calories ?? g.calories,
+          proteinG: g.proteinG ?? g.protein_g ?? g.protein,
+          carbsG: g.carbsG ?? g.carbs_g ?? g.carbs,
+          fatG: g.fatG ?? g.fat_g ?? g.fat,
+        } as UserGoals;
+      }
+
       return data.user;
     },
     enabled: !!token,

@@ -77,7 +77,7 @@ export default function ReviewScreen() {
         </View>
       ) : null}
 
-      {aiConfidence === 'low' && !saveError ? (
+      {typeof aiConfidence === 'string' && aiConfidence === 'low' && !saveError ? (
         <View style={{ marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FEF3C7', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <AlertCircle size={14} color="#D97706" />
           <Text style={{ color: '#D97706', fontSize: 12, fontWeight: '500', flex: 1 }}>Estimates may vary — tap any item to edit</Text>

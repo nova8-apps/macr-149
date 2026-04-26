@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
@@ -7,7 +7,7 @@ import { Mail, Lock, User, ArrowLeft } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
 import { useAppStore } from '@/lib/store';
-import { signupApi, hasCompletedOnboarding } from '@/lib/api-hooks';
+import { hasCompletedOnboarding } from '@/lib/api-hooks';
 import { isAppleAvailable, getToken as getNovaToken } from '@/nova8/backend/auth';
 import { auth } from '@/nova8/backend';
 import { colors } from '@/lib/theme';
@@ -41,9 +41,9 @@ export default function SignUpScreen() {
     hapticMedium();
 
     try {
-      const authUser = await signupApi(email.trim(), password, name.trim());
+      const user = await auth.signUpWithEmail(email.trim(), password, name.trim());
       const token = await getNovaToken();
-      setAuth(authUser as any, token || '');
+      setAuth(user as any, token || '');
       hapticSuccess();
       router.replace('/onboarding/step-1');
     } catch (err: unknown) {
@@ -99,7 +99,7 @@ export default function SignUpScreen() {
           </Pressable>
         </View>
 
-        <Image source={require('../../../assets/icon.png')} style={{ width: 64, height: 64, borderRadius: 20, alignSelf: 'center', marginBottom: 16 }} />
+        <View style={{ width: 64, height: 64, borderRadius: 20, alignSelf: 'center', marginBottom: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF', letterSpacing: -1 }}>M</Text></View>
         <Text style={{ fontSize: 28, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5, marginBottom: 8 }}>Create Account</Text>
         <Text style={{ fontSize: 15, color: colors.textSecondary, marginBottom: 32 }}>Start tracking your nutrition today</Text>
 

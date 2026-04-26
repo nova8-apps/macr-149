@@ -17,8 +17,8 @@ export default function LibraryScreen() {
 
   // Use API results if available, fall back to seed data with local filter
   const filtered = useMemo<FoodItem[]>(() => {
-    const apiResults = apiFoods && typeof apiFoods === 'object' && 'foods' in apiFoods ? apiFoods.foods : (Array.isArray(apiFoods) ? apiFoods : []);
-    if (apiResults.length > 0) return apiResults as unknown as FoodItem[];
+    const apiResults = apiFoods && typeof apiFoods === 'object' && 'foods' in apiFoods ? (apiFoods as any).foods : (Array.isArray(apiFoods) ? apiFoods : []);
+    if (apiResults.length > 0) return apiResults as FoodItem[];
     const localFoods = SEED_FOODS;
     if (!query.trim()) return localFoods;
     const q = query.toLowerCase();

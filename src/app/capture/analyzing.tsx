@@ -32,7 +32,7 @@ export default function AnalyzingScreen() {
       setError('Analysis is taking too long — please try again');
     }, 12000);
 
-    analyzeImage({ imageBase64: pendingMeal.imageBase64 })
+    analyzeImage(pendingMeal.imageBase64)
       .then((result) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setPendingMeal({

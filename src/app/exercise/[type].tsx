@@ -58,7 +58,6 @@ export default function ExerciseDetailScreen() {
         intensity,
         durationMin: actualDuration,
         caloriesBurned,
-        loggedAt: new Date().toISOString(),
       },
       {
         onSuccess: () => {

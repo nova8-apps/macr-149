@@ -89,7 +89,7 @@ export const useAppStore = create<AppStore>()(
       setOnboarded: (val) => set({ isOnboarded: val }),
 
       signOut: () => {
-        set({ user: null, sessionToken: null, isOnboarded: false });
+        set({ user: null, sessionToken: null });
         // Wave 23.2 — clear React Query cache so next account never
         // sees this account's data. See src/lib/queryClient.ts.
         try { queryClient.clear(); } catch {}

@@ -251,19 +251,19 @@ export default function ProgressScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Calories</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{(averages as any).calories ?? averages.caloriesConsumed}</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{(averages as any).calories ?? (averages as any).caloriesConsumed ?? 0}</Text>
                 </View>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Protein</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein }}>{(averages as any).protein ?? averages.proteinConsumed}g</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.protein }}>{(averages as any).protein ?? (averages as any).proteinConsumed ?? 0}g</Text>
                 </View>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Carbs</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{(averages as any).carbs ?? averages.carbsConsumed}g</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.carbs }}>{(averages as any).carbs ?? (averages as any).carbsConsumed ?? 0}g</Text>
                 </View>
                 <View>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 4 }}>Fat</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.fat }}>{(averages as any).fat ?? averages.fatConsumed}g</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: colors.fat }}>{(averages as any).fat ?? (averages as any).fatConsumed ?? 0}g</Text>
                 </View>
               </View>
             </View>
