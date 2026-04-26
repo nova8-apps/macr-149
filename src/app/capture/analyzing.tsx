@@ -38,10 +38,10 @@ export default function AnalyzingScreen() {
         setPendingMeal({
           ...pendingMeal,
           name: result.name,
-          calories: result.calories,
-          protein: result.protein,
-          carbs: result.carbs,
-          fat: result.fat,
+          totalCalories: result.totalCalories,
+          proteinG: result.proteinG,
+          carbsG: result.carbsG,
+          fatG: result.fatG,
           items: result.items,
           aiConfidence: result.aiConfidence,
         } as any);

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { Text } from '@/components/ui/text';
+import { MacrLogo } from '@/components/MacrLogo';
 import { useAppStore } from '@/lib/store';
 import { colors } from '@/lib/theme';
 
@@ -52,8 +53,9 @@ export default function SplashScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={[animStyle, { alignItems: 'center' }]}>
-        <View style={{ width: 80, height: 80, borderRadius: 24, marginBottom: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 40, fontWeight: '800', color: '#FFFFFF', letterSpacing: -1 }}>M</Text></View>
-        <Text style={{ fontSize: 36, fontWeight: '800', color: colors.primary, letterSpacing: -1 }}>Macr</Text>
+        <View style={{ marginBottom: 12 }}>
+          <MacrLogo size="lg" />
+        </View>
         <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 6 }}>Point. Snap. Know.</Text>
       </Animated.View>
     </View>

@@ -286,7 +286,7 @@ export function useGoalsMutation() {
       return data.goals;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] });
+      queryClient.invalidateQueries({ queryKey: ['me'], exact: false });
     },
   });
 }
@@ -320,7 +320,7 @@ export function useEntitlementMutation() {
       return data.entitlement;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] });
+      queryClient.invalidateQueries({ queryKey: ['me'], exact: false });
     },
   });
 }

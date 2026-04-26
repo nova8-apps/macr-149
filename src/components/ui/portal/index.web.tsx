@@ -13,4 +13,7 @@ const Portal: React.FC<IPortalProps> = ({ children }) => {
   return createPortal(<>{children}</>, document.body);
 };
 
-export { Portal };
+const PortalHost = () => null;
+
+export { Portal, PortalHost };
+export default Portal;

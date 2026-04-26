@@ -3,6 +3,7 @@ import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView 
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
+import { MacrLogo } from '@/components/MacrLogo';
 import { Mail, Lock, User, ArrowLeft } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
@@ -99,7 +100,9 @@ export default function SignUpScreen() {
           </Pressable>
         </View>
 
-        <View style={{ width: 64, height: 64, borderRadius: 20, alignSelf: 'center', marginBottom: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF', letterSpacing: -1 }}>M</Text></View>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <MacrLogo size="md" />
+        </View>
         <Text style={{ fontSize: 28, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5, marginBottom: 8 }}>Create Account</Text>
         <Text style={{ fontSize: 15, color: colors.textSecondary, marginBottom: 32 }}>Start tracking your nutrition today</Text>
 

@@ -4,6 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
+import { MacrLogo } from '@/components/MacrLogo';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { PillButton } from '@/components/PillButton';
@@ -109,9 +110,8 @@ export default function SignInScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[logoStyle, { alignItems: 'center', marginBottom: 40 }]}>
-          <View style={{ width: 64, height: 64, borderRadius: 20, marginBottom: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF', letterSpacing: -1 }}>M</Text></View>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: colors.primary, letterSpacing: -0.5 }}>Macr</Text>
-          <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>Welcome back</Text>
+          <MacrLogo size="md" />
+          <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 8 }}>Welcome back</Text>
         </Animated.View>
 
         <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: colors.border }}>

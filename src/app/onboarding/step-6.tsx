@@ -87,7 +87,7 @@ export default function OnboardingStep6() {
         fatG: targets.fat,
       });
       // Force an immediate refetch of the /auth/me endpoint so the home screen sees fresh goals
-      await queryClient.invalidateQueries({ queryKey: ['me'], refetchType: 'all' });
+      await queryClient.invalidateQueries({ queryKey: ['me'], refetchType: 'all', exact: false });
       // Wait for the refetch to complete before navigating
       await new Promise(resolve => setTimeout(resolve, 200));
       setOnboarded(true);

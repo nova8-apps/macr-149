@@ -30,7 +30,7 @@ export default function ReviewScreen() {
     );
   }
 
-  const { name, calories, protein, carbs, fat, items, photoUrl, aiConfidence } = pendingMeal;
+  const { name, totalCalories, proteinG, carbsG, fatG, items, photoUrl, aiConfidence } = pendingMeal;
 
   const handleSave = async () => {
     hapticMedium();
@@ -38,13 +38,22 @@ export default function ReviewScreen() {
     try {
       await saveMeal({
         name: name || 'Meal',
-        calories: calories || 0,
-        protein: protein || 0,
-        carbs: carbs || 0,
-        fat: fat || 0,
-        eatenAt: new Date().toISOString(),
+        totalCalories: totalCalories || 0,
+        proteinG: proteinG || 0,
+        carbsG: carbsG || 0,
+        fatG: fatG || 0,
+        eatenAt: Date.now() as any,
         photoUrl,
-        items,
+        items: items.map((item, idx) => ({
+          id: `item-${Date.now()}-${idx}`,
+          name: item.name,
+          calories: item.calories,
+          proteinG: item.proteinG,
+          carbsG: item.carbsG,
+          fatG: item.fatG,
+          quantity: 1,
+          unit: item.servingSize || 'serving',
+        })),
       });
       clearPendingMeal();
       router.replace('/(tabs)/home');
@@ -99,20 +108,20 @@ export default function ReviewScreen() {
         <View style={{ marginTop: 16, backgroundColor: colors.surface, borderRadius: 16, padding: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>CALORIES</Text>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{calories || 0}</Text>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{totalCalories || 0}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>PROTEIN</Text>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{protein || 0}g</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{proteinG || 0}g</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>CARBS</Text>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{carbs || 0}g</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{carbsG || 0}g</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>FAT</Text>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{fat || 0}g</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{fatG || 0}g</Text>
             </View>
           </View>
         </View>
@@ -128,9 +137,9 @@ export default function ReviewScreen() {
                   <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{item.calories} cal</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>P: {item.protein ?? item.proteinG}g</Text>
-                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>C: {item.carbs ?? item.carbsG}g</Text>
-                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>F: {item.fat ?? item.fatG}g</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>P: {item.proteinG}g</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>C: {item.carbsG}g</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>F: {item.fatG}g</Text>
                 </View>
               </View>
             ))}
