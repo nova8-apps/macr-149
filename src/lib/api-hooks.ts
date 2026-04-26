@@ -403,8 +403,8 @@ export function useAnalyticsTrends(range: 'week' | 'month' | '3months' = 'week')
       const start = end - daysBack * 86400000;
 
       const [mealDocs, exDocs, goalsDoc] = await Promise.all([
-        db.query('meals', 'eatenAt', '>=', start, { orderBy: 'eatenAt', orderDir: 'asc', limit: 1000 }),
-        db.query('exercises', 'loggedAt', '>=', start, { orderBy: 'loggedAt', orderDir: 'asc', limit: 1000 }),
+        db.query('meals', 'eatenAt', '>=', start, { orderBy: 'eatenAt', orderDir: 'asc', limit: 200 }),
+        db.query('exercises', 'loggedAt', '>=', start, { orderBy: 'loggedAt', orderDir: 'asc', limit: 200 }),
         db.get('user_goals', GOALS_DOC_ID).catch(() => null),
       ]);
 
