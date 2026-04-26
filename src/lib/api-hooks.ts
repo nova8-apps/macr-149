@@ -171,9 +171,15 @@ export function useDeleteMeal() {
         { queryKey: ['meals'], exact: false },
         (old) => (old ? old.filter((m) => m.id !== deletedId) : old),
       );
-      queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
+      // Delayed reconciliation — same Firestore index-latency reason
+      // as useSaveMeal above. An immediate invalidate would refetch a
+      // list that still includes the deleted doc and clobber our local
+      // prune.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
+      }, 3500);
     },
   });
 }
@@ -182,10 +188,16 @@ export function useSaveMeal() {
   return useMutation({
     mutationFn: async (meal: Partial<Meal>) => {
       const eatenAt = Number((meal as any).eatenAt) || Date.now();
+      // Wave 23.35.3 — store BOTH `calories` and `totalCalories` so every
+      // reader (home.tsx reads `meal.calories`, analytics + stats-summary
+      // read `meal.totalCalories`) finds the value. Same for proteinG /
+      // carbsG / fatG which are already in the agreed-on shape.
+      const cal = Number((meal as any).totalCalories ?? (meal as any).calories ?? 0);
       const created = await db.create('meals', {
         name: String((meal as any).name || 'Meal'),
         photoUrl: (meal as any).photoUrl ?? null,
-        totalCalories: Number((meal as any).totalCalories || 0),
+        calories: cal,
+        totalCalories: cal,
         proteinG: Number((meal as any).proteinG || 0),
         carbsG: Number((meal as any).carbsG || 0),
         fatG: Number((meal as any).fatG || 0),
@@ -205,13 +217,13 @@ export function useSaveMeal() {
       const isoDay = new Date(eatenAt).toISOString().split('T')[0];
 
       // 1) Append to every cached useMealsByDate(date) for the meal's day.
+      //    The shape we splice in mirrors what useMealsByDate's queryFn
+      //    produces (id at top + spread data fields), so home.tsx's
+      //    `meal.calories` / `meal.proteinG` reads work immediately.
       queryClient.setQueriesData<Meal[] | undefined>(
         { queryKey: ['meals'], exact: false },
         (old) => {
           if (!old) return old;
-          // Skip cached entries whose date doesn't match this meal's day.
-          // (We can't introspect the queryKey from setQueriesData callback
-          // directly, so we just guard by deduping on id.)
           if (old.some((m) => m.id === (newMeal as any).id)) return old;
           return [newMeal as Meal, ...old];
         },
@@ -226,7 +238,7 @@ export function useSaveMeal() {
           const m = newMeal as any;
           return {
             ...old,
-            caloriesConsumed: Number(old.caloriesConsumed || 0) + Number(m.totalCalories || 0),
+            caloriesConsumed: Number(old.caloriesConsumed || 0) + Number(m.totalCalories ?? m.calories ?? 0),
             proteinConsumed: Number(old.proteinConsumed || 0) + Number(m.proteinG || 0),
             carbsConsumed: Number(old.carbsConsumed || 0) + Number(m.carbsG || 0),
             fatConsumed: Number(old.fatConsumed || 0) + Number(m.fatG || 0),
@@ -234,11 +246,17 @@ export function useSaveMeal() {
         },
       );
 
-      // 3) Still invalidate so a slightly later refetch reconciles with
-      //    the canonical server result once the index has caught up.
-      queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
+      // 3) DELAYED invalidate — Firestore needs ~2s to index a fresh
+      //    write, so calling invalidateQueries() immediately would
+      //    refetch the OLD list (no new doc yet), OVERWRITING our
+      //    optimistic splice and putting the home screen back to
+      //    "No meals logged yet". Wait long enough for the index to
+      //    catch up before reconciling.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
+      }, 3500);
     },
   });
 }
@@ -412,7 +430,7 @@ export function useStatsSummary(date?: string) {
       let fatConsumed = 0;
       for (const m of meals) {
         const d = m.data as any;
-        caloriesConsumed += Number(d.totalCalories || 0);
+        caloriesConsumed += Number(d.totalCalories ?? d.calories ?? 0);
         proteinConsumed += Number(d.proteinG || 0);
         carbsConsumed += Number(d.carbsG || 0);
         fatConsumed += Number(d.fatG || 0);
@@ -464,7 +482,7 @@ export function useAnalyticsTrends(range: 'week' | 'month' | '3months' = 'week')
         if (!trendsByDay[date]) {
           trendsByDay[date] = { date, calories: 0, protein: 0, carbs: 0, fat: 0, burned: 0, mealCount: 0 };
         }
-        trendsByDay[date].calories += Number(d.totalCalories || 0);
+        trendsByDay[date].calories += Number(d.totalCalories ?? d.calories ?? 0);
         trendsByDay[date].protein += Number(d.proteinG || 0);
         trendsByDay[date].carbs += Number(d.carbsG || 0);
         trendsByDay[date].fat += Number(d.fatG || 0);
