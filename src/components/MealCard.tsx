@@ -71,19 +71,21 @@ export function MealCard({ meal, onPress, onDelete }: MealCardProps) {
             </View>
           </View>
         </View>
-        <View style={{ alignItems: 'flex-end', marginLeft: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Flame size={14} color={colors.primary} />
-            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>{meal.totalCalories}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Flame size={14} color={colors.primary} />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>{meal.totalCalories}</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: colors.textSecondary }}>kcal</Text>
           </View>
-          <Text style={{ fontSize: 11, color: colors.textSecondary }}>kcal</Text>
           {onDelete && (
             <Pressable
-              style={{ marginTop: 6 }}
+              style={{ padding: 8, marginLeft: 4 }}
               onPress={() => { hapticLight(); onDelete(); }}
               accessibilityLabel={`Delete meal ${meal.name}`}
               testID={`delete-meal-${meal.id}`}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Trash2 size={18} color="#E05555" />
             </Pressable>

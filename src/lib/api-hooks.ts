@@ -29,6 +29,7 @@ import type { User, Meal, FoodItem, WeightLog, Exercise, UserGoals, Entitlement 
 import { useAppStore } from './store';
 import { queryClient } from './queryClient';
 import { auth } from '@/nova8/backend';
+import { localDateKey, localStartOfDayMs } from './date';
 
 // ─── Helpers ───────────────────────────────────────────────
 //
@@ -39,8 +40,8 @@ const STREAK_DOC_ID = 'default';
 const ENTITLEMENT_DOC_ID = 'default';
 
 function startOfDayMs(date: string): number {
-  // YYYY-MM-DD → epoch ms at 00:00 UTC. eatenAt is stored as epoch-ms.
-  return new Date(date + 'T00:00:00Z').getTime();
+  // YYYY-MM-DD → epoch ms at LOCAL midnight (not UTC).
+  return localStartOfDayMs(date);
 }
 
 // ─── Auth Hooks ────────────────────────────────────────────
@@ -214,7 +215,7 @@ export function useSaveMeal() {
     // the next natural refetch reconciles with the server-side index.
     onSuccess: (newMeal) => {
       const eatenAt = Number((newMeal as any).eatenAt) || Date.now();
-      const isoDay = new Date(eatenAt).toISOString().split('T')[0];
+      const isoDay = localDateKey(new Date(eatenAt));
       const token = useAppStore.getState().sessionToken;
 
       // Wave 23.35.6 — splice the new meal into BOTH:
@@ -271,6 +272,75 @@ export function useSaveMeal() {
       //    optimistic splice and putting the home screen back to
       //    "No meals logged yet". Wait long enough for the index to
       //    catch up before reconciling.
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
+      }, 3500);
+    },
+  });
+}
+
+export function useUpdateMeal() {
+  return useMutation({
+    mutationFn: async (meal: { id: string; name: string; totalCalories: number; proteinG: number; carbsG: number; fatG: number }) => {
+      const cal = Number(meal.totalCalories) || 0;
+      const updated = await db.update('meals', meal.id, {
+        name: String(meal.name || 'Meal'),
+        calories: cal,
+        totalCalories: cal,
+        proteinG: Number(meal.proteinG) || 0,
+        carbsG: Number(meal.carbsG) || 0,
+        fatG: Number(meal.fatG) || 0,
+      });
+      return { id: updated.id, ...(updated.data as any) } as Meal;
+    },
+    onMutate: async (vars) => {
+      // Optimistic update: patch the meal in every ['meals', ...] cache entry.
+      const allQueries = queryClient.getQueriesData<Meal[]>({ queryKey: ['meals'], exact: false });
+      const cal = Number(vars.totalCalories) || 0;
+      let oldMeal: Meal | undefined;
+
+      for (const [key, data] of allQueries) {
+        if (!data) continue;
+        const idx = data.findIndex((m) => m.id === vars.id);
+        if (idx === -1) continue;
+        if (!oldMeal) oldMeal = data[idx];
+        const patched = [...data];
+        patched[idx] = {
+          ...patched[idx],
+          name: vars.name,
+          calories: cal,
+          totalCalories: cal,
+          proteinG: vars.proteinG,
+          carbsG: vars.carbsG,
+          fatG: vars.fatG,
+        };
+        queryClient.setQueryData(key, patched);
+      }
+
+      // Patch stats-summary for the meal's day
+      if (oldMeal) {
+        const eatenAt = Number((oldMeal as any).eatenAt) || 0;
+        if (eatenAt) {
+          const isoDay = localDateKey(new Date(eatenAt));
+          queryClient.setQueriesData<any>(
+            { queryKey: ['stats-summary', isoDay], exact: false },
+            (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                caloriesConsumed: Number(old.caloriesConsumed || 0) - Number(oldMeal!.totalCalories ?? oldMeal!.calories ?? 0) + cal,
+                proteinConsumed: Number(old.proteinConsumed || 0) - Number(oldMeal!.proteinG || 0) + Number(vars.proteinG || 0),
+                carbsConsumed: Number(old.carbsConsumed || 0) - Number(oldMeal!.carbsG || 0) + Number(vars.carbsG || 0),
+                fatConsumed: Number(old.fatConsumed || 0) - Number(oldMeal!.fatG || 0) + Number(vars.fatG || 0),
+              };
+            },
+          );
+        }
+      }
+    },
+    onSuccess: () => {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
         queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
@@ -429,7 +499,7 @@ export function useLogWeight() {
 // /api/stats/summary endpoint that doesn't exist in cloud.
 
 export function useStatsSummary(date?: string) {
-  const today = date || new Date().toISOString().split('T')[0];
+  const today = date || localDateKey();
   const token = useAppStore((s) => s.sessionToken);
   return useQuery({
     queryKey: ['stats-summary', today, token],

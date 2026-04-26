@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Pressable, Modal, Animated, Platform } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Pressable, Modal, Animated, Platform, AppState } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Camera, Barcode, ScanLine } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { ScrollView } from '@/components/ui/scroll-view';
-import { useMe, useMealsByDate } from '@/lib/api-hooks';
+import { useMe, useMealsByDate, useDeleteMeal } from '@/lib/api-hooks';
 import { hapticMedium } from '@/lib/haptics';
 import { colors } from '@/lib/theme';
+import { localDateKey, localStartOfDayMs } from '@/lib/date';
 import { CalorieRing } from '@/components/CalorieRing';
 import { MacroRing } from '@/components/MacroRing';
 import { DayStrip } from '@/components/DayStrip';
@@ -19,10 +20,56 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { data: me, isLoading: meLoading } = useMe();
-  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const entitlement = me?.entitlement;
+  const [today, setToday] = useState<string>(() => localDateKey());
+  const [selectedDate, setSelectedDate] = useState<string>(() => localDateKey());
   const { data: meals = [] } = useMealsByDate(selectedDate);
+  const deleteMeal = useDeleteMeal();
   const [menuOpen, setMenuOpen] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0)).current;
+
+  // ─── Midnight rollover + foreground resume ───────────────
+  // Two triggers ensure `today` advances to the new local day:
+  //   1. A setTimeout armed to fire at local midnight + 500ms buffer
+  //   2. An AppState listener that checks on every foreground resume
+  // The `prev === todayRef.current` guard preserves manual day selections
+  // (user tapped a past day on the strip) — only users viewing "today"
+  // auto-advance.
+  const todayRef = useRef(today);
+  todayRef.current = today;
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+
+    const armMidnightTimer = () => {
+      const now = Date.now();
+      const nextMidnight = localStartOfDayMs(localDateKey()) + 86_400_000;
+      const ms = Math.max(nextMidnight - now + 500, 1000); // +500ms guard
+      timer = setTimeout(() => {
+        const k = localDateKey();
+        setToday(k);
+        setSelectedDate((prev) => (prev === todayRef.current ? k : prev));
+        armMidnightTimer(); // re-arm for the next midnight
+      }, ms);
+    };
+
+    armMidnightTimer();
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        const k = localDateKey();
+        if (k !== todayRef.current) {
+          setToday(k);
+          setSelectedDate((prev) => (prev === todayRef.current ? k : prev));
+        }
+      }
+    });
+
+    return () => {
+      clearTimeout(timer);
+      sub.remove();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wave 23.35.4 — never flash a hardcoded default before the user's real
   // goals load. We treat `me` as "resolved" only once the query has finished
@@ -67,16 +114,31 @@ export default function HomeScreen() {
     router.push(route as any);
   };
 
+  const requirePro = (route: string) => {
+    hapticMedium();
+    setMenuOpen(false);
+    if (!entitlement?.isPro) {
+      router.push('/paywall');
+    } else {
+      router.push(route as any);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, marginBottom: 16 }}>
+          {/* `today` in scope forces a re-render when midnight rolls over */}
           <Text style={{ fontSize: 28, fontWeight: '700', color: colors.textPrimary }}>
-            Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}
+            {(() => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; })()}
           </Text>
           <Text style={{ fontSize: 15, color: colors.textSecondary, marginTop: 2 }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            {(() => {
+              // Parse `today` (YYYY-MM-DD) into a local Date for display
+              const [y, m, d] = today.split('-').map(Number);
+              return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            })()}
           </Text>
         </View>
 
@@ -118,7 +180,7 @@ export default function HomeScreen() {
 
         {/* Day Strip */}
         <View style={{ marginBottom: 20 }}>
-          <DayStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          <DayStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} today={today} />
         </View>
 
         {/* Meals List */}
@@ -132,7 +194,7 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : (
-            meals.map((meal) => <MealCard key={meal.id} meal={meal} />)
+            meals.map((meal) => <MealCard key={meal.id} meal={meal} onPress={() => router.push({ pathname: '/meal/[id]' as any, params: { id: meal.id } })} onDelete={() => deleteMeal.mutate(meal.id)} />)
           )}
         </View>
       </ScrollView>
@@ -148,10 +210,10 @@ export default function HomeScreen() {
         style={{
           position: 'absolute',
           right: 20,
-          bottom: insets.bottom + 85,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          bottom: 60,
+          width: 64,
+          height: 64,
+          borderRadius: 32,
           backgroundColor: colors.primary,
           alignItems: 'center',
           justifyContent: 'center',
@@ -161,7 +223,7 @@ export default function HomeScreen() {
           shadowRadius: 8,
           elevation: 8,
         }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Plus size={28} color="#fff" />
+        <Plus size={32} color="#fff" />
       </Pressable>
 
       {/* Floating Menu Modal */}
@@ -175,7 +237,7 @@ export default function HomeScreen() {
             style={{
               position: 'absolute',
               right: 20,
-              bottom: insets.bottom + 85 + 72,
+              bottom: 60 + 80,
               transform: [{ scale: scaleAnim }],
               backgroundColor: colors.surface,
               borderRadius: 16,
@@ -190,8 +252,9 @@ export default function HomeScreen() {
             }}
           >
             <Pressable
-              onPress={() => handleMenuOption('/capture')}
-              style={{ paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}
+              onPress={() => requirePro('/capture')}
+              disabled={meLoading}
+              style={{ paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border, opacity: meLoading ? 0.5 : 1 }}
               accessibilityLabel="Scan meal with camera"
               testID="menu-scan-meal"
             >
@@ -201,8 +264,9 @@ export default function HomeScreen() {
               </View>
             </Pressable>
             <Pressable
-              onPress={() => handleMenuOption('/capture/barcode')}
-              style={{ paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}
+              onPress={() => requirePro('/capture/barcode')}
+              disabled={meLoading}
+              style={{ paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border, opacity: meLoading ? 0.5 : 1 }}
               accessibilityLabel="Scan barcode"
               testID="menu-scan-barcode"
             >
@@ -212,8 +276,9 @@ export default function HomeScreen() {
               </View>
             </Pressable>
             <Pressable
-              onPress={() => handleMenuOption('/capture/food-label')}
-              style={{ paddingVertical: 12, paddingHorizontal: 16 }}
+              onPress={() => requirePro('/capture/food-label')}
+              disabled={meLoading}
+              style={{ paddingVertical: 12, paddingHorizontal: 16, opacity: meLoading ? 0.5 : 1 }}
               accessibilityLabel="Scan food label"
               testID="menu-scan-food-label"
             >
