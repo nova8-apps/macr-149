@@ -1,20 +1,15 @@
 import React, { useState, useRef } from 'react';
-import { View, Pressable, Platform, StyleSheet } from 'react-native';
+import { View, Pressable, Platform, StyleSheet, Alert, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { Text } from '@/components/ui/text';
-import { ArrowLeft, Camera, Image as ImageIcon, CheckCircle, PenLine, RotateCcw, Zap, ZapOff } from 'lucide-react-native';
+import { ArrowLeft, Camera, Image as ImageIcon, CheckCircle, RotateCcw, Zap, ZapOff } from 'lucide-react-native';
 import { colors } from '@/lib/theme';
 import { hapticMedium } from '@/lib/haptics';
 import { useAppStore } from '@/lib/store';
 import * as FileSystem from 'expo-file-system';
-
-const CHIPS = [
-  { icon: Camera, label: 'Take Photo', active: true },
-  { icon: ImageIcon, label: 'Library', route: '/capture/library' },
-  { icon: PenLine, label: 'Manual Entry', route: '/capture/food-label' },
-];
+import * as ImagePicker from 'expo-image-picker';
 
 export default function CaptureScreen() {
   const [step] = useState<number>(1);
@@ -64,6 +59,49 @@ export default function CaptureScreen() {
   const toggleFlash = () => {
     hapticMedium();
     setFlash(f => f === 'off' ? 'on' : 'off');
+  };
+
+  const handlePickFromLibrary = async () => {
+    try {
+      const { status, canAskAgain } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        if (!canAskAgain) {
+          Alert.alert(
+            'Photo library access needed',
+            'To choose a photo of your meal, allow photo library access in Settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ],
+          );
+        }
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.85,
+        base64: true,
+        allowsEditing: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        setPendingMeal({
+          name: 'Analyzing...',
+          photoUrl: asset.uri,
+          imageBase64: asset.base64 ?? undefined,
+          totalCalories: 0,
+          proteinG: 0,
+          carbsG: 0,
+          fatG: 0,
+          items: [],
+        } as any);
+        router.push('/capture/analyzing');
+      }
+    } catch (e) {
+      console.error('[capture] library picker error:', e);
+    }
   };
 
   // Permission gate
@@ -168,25 +206,36 @@ export default function CaptureScreen() {
       {/* Chips */}
       <View style={{ position: 'absolute', bottom: 140, left: 0, right: 0, paddingHorizontal: 20 }}>
         <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
-          {CHIPS.map((chip, i) => (
-            <Pressable
-              key={i}
-              onPress={() => {
-                hapticMedium();
-                if (chip.route) router.push(chip.route as any);
-              }}
-              accessibilityLabel={chip.label}
-              testID={`chip-${chip.label.toLowerCase().replace(/\s+/g, '-')}`}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 6,
-                backgroundColor: chip.active ? colors.primary : 'rgba(255,255,255,0.15)',
-                borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10,
-              }}
-            >
-              <chip.icon size={16} color="#fff" />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>{chip.label}</Text>
-            </Pressable>
-          ))}
+          <Pressable
+            onPress={() => {
+              hapticMedium();
+              handleCapture();
+            }}
+            accessibilityLabel="Take Photo"
+            testID="chip-take-photo"
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+              backgroundColor: colors.primary,
+              borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10,
+            }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Camera size={16} color="#fff" />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Take Photo</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              hapticMedium();
+              handlePickFromLibrary();
+            }}
+            accessibilityLabel="Choose photo from library"
+            testID="chip-library-photos"
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+              backgroundColor: 'rgba(255,255,255,0.15)',
+              borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10,
+            }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <ImageIcon size={16} color="#fff" />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Library</Text>
+          </Pressable>
         </View>
       </View>
 

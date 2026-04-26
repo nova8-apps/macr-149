@@ -61,7 +61,7 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/[REPLACE_AFTER_FIRST_BUILD]",
+      "url": "https://u.expo.dev/aa561d19-9ca3-40cb-8b4a-3ffe808bf482",
       "requestHeaders": {
         "expo-channel-name": "production"
       }
