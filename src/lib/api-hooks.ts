@@ -248,7 +248,7 @@ export function useSaveMeal() {
       //    ring updates instantly with the new totals.
       queryClient.setQueriesData<any>(
         { queryKey: ['stats-summary', isoDay], exact: false },
-        (old) => {
+        (old: any) => {
           if (!old) return old;
           const m = newMeal as any;
           return {

@@ -17,7 +17,7 @@ import { clearSession } from "../lib/session";
  *
  * Any app that allows the user to create an account must also let
  * them delete that account from within the app. This screen calls
- * DELETE /auth/me on the backend (see server/routes.ts) which
+ * DELETE /api/app/:projectId/auth/me on Nova8's backend which
  * cascades the account, all content, and the active session.
  *
  * Reviewers WILL test this path during App Review. Do not remove

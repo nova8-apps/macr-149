@@ -79,7 +79,7 @@ export default function ProgressScreen() {
 
   const goals = meData?.goals;
   const streak = meData?.streak ?? { currentStreak: 0, longestStreak: 0, lastLoggedDate: '' };
-  const weightLogs = Array.isArray(weightLogsData) ? weightLogsData : (weightLogsData?.logs ?? []);
+  const weightLogs = Array.isArray(weightLogsData) ? weightLogsData : [];
   const trends = analyticsData?.trends ?? [];
   const averages = analyticsData?.averages;
   const daysOnTrack = analyticsData?.daysOnTrack ?? 0;
