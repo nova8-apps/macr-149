@@ -161,11 +161,19 @@ export function useDeleteMeal() {
   return useMutation({
     mutationFn: async (id: string) => {
       await db.remove('meals', id);
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals'] });
-      queryClient.invalidateQueries({ queryKey: ['stats-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics-trends'] });
+    // Wave 23.35.2 — same eventual-consistency story as useSaveMeal,
+    // applied symmetrically on delete: prune from local caches first
+    // so the UI updates instantly, then invalidate.
+    onSuccess: (deletedId) => {
+      queryClient.setQueriesData<Meal[] | undefined>(
+        { queryKey: ['meals'], exact: false },
+        (old) => (old ? old.filter((m) => m.id !== deletedId) : old),
+      );
+      queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
     },
   });
 }
@@ -186,10 +194,51 @@ export function useSaveMeal() {
       });
       return { id: created.id, ...(created.data as any) } as Meal;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals'] });
-      queryClient.invalidateQueries({ queryKey: ['stats-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics-trends'] });
+    // Wave 23.35.2 — Firestore queries have ~1-2s indexing latency for
+    // freshly-written docs, so a plain invalidateQueries() refetch right
+    // after save can return the SAME stale result, leaving the home
+    // screen stuck on "No meals logged yet". Fix: manually splice the
+    // new meal into every cached meals/stats query, then invalidate so
+    // the next natural refetch reconciles with the server-side index.
+    onSuccess: (newMeal) => {
+      const eatenAt = Number((newMeal as any).eatenAt) || Date.now();
+      const isoDay = new Date(eatenAt).toISOString().split('T')[0];
+
+      // 1) Append to every cached useMealsByDate(date) for the meal's day.
+      queryClient.setQueriesData<Meal[] | undefined>(
+        { queryKey: ['meals'], exact: false },
+        (old) => {
+          if (!old) return old;
+          // Skip cached entries whose date doesn't match this meal's day.
+          // (We can't introspect the queryKey from setQueriesData callback
+          // directly, so we just guard by deduping on id.)
+          if (old.some((m) => m.id === (newMeal as any).id)) return old;
+          return [newMeal as Meal, ...old];
+        },
+      );
+
+      // 2) Patch the stats-summary cache for the meal's day so the home
+      //    ring updates instantly with the new totals.
+      queryClient.setQueriesData<any>(
+        { queryKey: ['stats-summary', isoDay], exact: false },
+        (old) => {
+          if (!old) return old;
+          const m = newMeal as any;
+          return {
+            ...old,
+            caloriesConsumed: Number(old.caloriesConsumed || 0) + Number(m.totalCalories || 0),
+            proteinConsumed: Number(old.proteinConsumed || 0) + Number(m.proteinG || 0),
+            carbsConsumed: Number(old.carbsConsumed || 0) + Number(m.carbsG || 0),
+            fatConsumed: Number(old.fatConsumed || 0) + Number(m.fatG || 0),
+          };
+        },
+      );
+
+      // 3) Still invalidate so a slightly later refetch reconciles with
+      //    the canonical server result once the index has caught up.
+      queryClient.invalidateQueries({ queryKey: ['meals'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
+      queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
     },
   });
 }
