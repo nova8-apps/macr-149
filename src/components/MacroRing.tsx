@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, { useAnimatedProps, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Text } from '@/components/ui/text';
+import { Skeleton } from '@/components/ui/skeleton';
 import { colors } from '@/lib/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -59,10 +60,18 @@ export function MacroRing({ label, consumed, total, color, size = 80, loading = 
           />
         </Svg>
         <View style={{ position: 'absolute', alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: loading ? colors.textSecondary : colors.textPrimary }}>
-            {loading ? '—' : remaining}
-          </Text>
-          <Text style={{ fontSize: 9, color: colors.textSecondary, marginTop: -2 }}>{loading ? '…' : 'g left'}</Text>
+          {loading ? (
+            <View style={{ width: 80, height: 80, borderRadius: 40, overflow: 'hidden' }}>
+              <Skeleton variant="circular" speed={2} />
+            </View>
+          ) : (
+            <>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>
+                {remaining}
+              </Text>
+              <Text style={{ fontSize: 9, color: colors.textSecondary, marginTop: -2 }}>g left</Text>
+            </>
+          )}
         </View>
       </View>
       <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginTop: 6 }}>{label}</Text>

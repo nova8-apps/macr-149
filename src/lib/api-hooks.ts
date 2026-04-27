@@ -1,3 +1,4 @@
+import React from 'react';
 import { __nova8UploadIfLocal } from '@/lib/__nova8UploadIfLocal';
 // src/lib/api-hooks.ts — Wave 23.35 (single backend = Nova8 cloud)
 // ───────────────────────────────────────────────────────────────────
@@ -133,6 +134,7 @@ export function useMe() {
     },
     enabled: !!token,
     staleTime: 15 * 60 * 1000, // 15 minutes (goals/streak/entitlement change infrequently)
+    placeholderData: (prev) => prev, // Wave 23.60 — serve persisted cache synchronously on cold start
   });
 }
 
@@ -219,30 +221,55 @@ export function useMealsByDate(date: string) {
         .filter((d) => Number((d.data as any).eatenAt) < end)
         .map((d) => ({ id: d.id, ...(d.data as any) })) as Meal[];
 
-      // Resolve any r2:... stable IDs to fresh 24-hour presigned URLs.
-      // This must happen INSIDE the queryFn so every execution (including
-      // cache restoration) produces fresh URLs rather than stale ones.
-      const storage = await import('@/nova8/backend/storage');
-      await Promise.all(
-        meals.map(async (m) => {
-          if (typeof m.photoUrl === 'string' && m.photoUrl.startsWith('r2:')) {
-            const id = m.photoUrl.slice(3); // strip 'r2:' prefix
-            try {
-              m.photoUrl = await storage.getUrl(id, { ttlSeconds: 86400 });
-            } catch {
-              // URL resolution failed — leave as undefined so the Flame icon fallback renders.
-              m.photoUrl = undefined;
-            }
-          }
-        })
-      );
-
+      // Wave 23.60 — return meals immediately with raw r2: photoUrl strings.
+      // URL resolution is deferred to usePhotoUrlHydration (post-render).
       return meals;
     },
     enabled: !!token,
     staleTime: 60 * 1000, // 1 minute (per-day meal data changes when user logs)
     gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days (restore from disk on cold start)
   });
+}
+
+/**
+ * Wave 23.60 — usePhotoUrlHydration
+ *
+ * Runs AFTER render to resolve r2: storage IDs to fresh signed URLs, then
+ * patches results back into the React Query cache so meal cards fill in their
+ * photos asynchronously instead of blocking the entire query on cold start.
+ */
+export function usePhotoUrlHydration(meals: Meal[], date: string) {
+  const token = useAppStore((s) => s.sessionToken);
+
+  React.useEffect(() => {
+    if (!meals || meals.length === 0) return;
+
+    const hydrate = async () => {
+      const storage = await import('@/nova8/backend/storage');
+      const hydrated = await Promise.all(
+        meals.map(async (m) => {
+          if (typeof m.photoUrl === 'string' && m.photoUrl.startsWith('r2:')) {
+            const id = m.photoUrl.slice(3); // strip 'r2:' prefix
+            try {
+              const url = await storage.getUrl(id, { ttlSeconds: 86400 });
+              return { ...m, photoUrl: url };
+            } catch {
+              // URL resolution failed — leave photoUrl undefined so Flame icon renders.
+              return { ...m, photoUrl: undefined };
+            }
+          }
+          return m;
+        })
+      );
+
+      // Patch the hydrated meals back into the cache.
+      queryClient.setQueryData(['meals', date, token], hydrated);
+    };
+
+    hydrate().catch((err) => {
+      console.warn('[photo-hydration]', err);
+    });
+  }, [meals, date, token]);
 }
 
 export function useDeleteMeal() {

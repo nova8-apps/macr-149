@@ -10,7 +10,7 @@ import { MacroRing } from '@/components/MacroRing';
 import { DayStrip } from '@/components/DayStrip';
 import { MealCard } from '@/components/MealCard';
 import { StreakPill } from '@/components/StreakPill';
-import { useMe, useMealsByDate } from '@/lib/api-hooks';
+import { useMe, useMealsByDate, usePhotoUrlHydration } from '@/lib/api-hooks';
 import { colors } from '@/lib/theme';
 import { hapticMedium } from '@/lib/haptics';
 import { localDateKey } from '@/lib/date';
@@ -22,7 +22,11 @@ export default function HomeScreen() {
   const { data: me } = useMe();
   const { data: meals = [], isFetching, refetch } = useMealsByDate(selectedDate);
 
-  const goalsLoaded = !!me?.goals;
+  // Wave 23.60 — resolve photo URLs in background after render
+  usePhotoUrlHydration(meals, selectedDate);
+
+  // Wave 23.60 — only treat as loading when cache is genuinely empty (first install)
+  const goalsLoaded = me !== undefined;
   const calorieGoal = me?.goals?.dailyCalories ?? 2000;
   const proteinGoal = me?.goals?.proteinG ?? 150;
   const carbGoal = me?.goals?.carbsG ?? 200;

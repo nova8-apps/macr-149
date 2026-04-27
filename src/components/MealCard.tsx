@@ -37,6 +37,10 @@ export function MealCard({ meal, onPress, onDelete }: MealCardProps) {
     return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
   }, [meal.eatenAt]);
 
+  // Wave 23.60 — Guard against unresolved r2: storage IDs. meal.photoUrl may
+  // start as "r2:abc123" on cold start until usePhotoUrlHydration resolves it.
+  const showPhoto = meal.photoUrl && typeof meal.photoUrl === 'string' && !meal.photoUrl.startsWith('r2:');
+
   return (
     <Animated.View style={animStyle}>
       <Pressable
@@ -47,7 +51,7 @@ export function MealCard({ meal, onPress, onDelete }: MealCardProps) {
         accessibilityLabel={`Meal: ${meal.name}`}
         testID={`meal-card-${meal.id}`}
       >
-        {meal.photoUrl ? (
+        {showPhoto ? (
           <Image
             source={{ uri: meal.photoUrl }}
             style={{ width: 56, height: 56, borderRadius: 14, marginRight: 12 }}

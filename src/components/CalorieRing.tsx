@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Animated, { useAnimatedProps, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Text } from '@/components/ui/text';
+import { Skeleton } from '@/components/ui/skeleton';
 import { colors } from '@/lib/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -66,12 +67,20 @@ export function CalorieRing({ consumed, total, size = 200, strokeWidth = 14, sho
       </Svg>
       {showLabel && (
         <View style={{ position: 'absolute', alignItems: 'center' }}>
-          <Text style={{ fontSize: 40, fontWeight: '800', color: loading ? colors.textSecondary : colors.textPrimary, letterSpacing: -1.5 }}>
-            {loading ? '—' : remaining}
-          </Text>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginTop: -4 }}>
-            {loading ? 'Loading…' : 'Calories left'}
-          </Text>
+          {loading ? (
+            <View style={{ width: 200, height: 200, borderRadius: 100, overflow: 'hidden' }}>
+              <Skeleton variant="circular" speed={2} />
+            </View>
+          ) : (
+            <>
+              <Text style={{ fontSize: 40, fontWeight: '800', color: colors.textPrimary, letterSpacing: -1.5 }}>
+                {remaining}
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginTop: -4 }}>
+                Calories left
+              </Text>
+            </>
+          )}
         </View>
       )}
     </View>
