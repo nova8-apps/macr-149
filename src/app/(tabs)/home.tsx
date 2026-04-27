@@ -134,7 +134,7 @@ export default function HomeScreen() {
         style={{
           position: 'absolute',
           right: 20,
-          bottom: 100,
+          bottom: 32,
           width: 60,
           height: 60,
           borderRadius: 30,
