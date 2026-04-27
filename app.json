@@ -33,7 +33,8 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.nova8.macrolens",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "bundler": "metro",
