@@ -121,7 +121,7 @@ export default function SettingsScreen() {
 
   const handleSupport = () => {
     hapticLight();
-    Linking.openURL('mailto:support@macr.app');
+    Linking.openURL('mailto:support@apexailabs.dev');
   };
 
   const initials = user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U';
@@ -278,7 +278,7 @@ export default function SettingsScreen() {
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <SettingRow icon={Info} label="Terms of Service" onPress={handlePrivacyPolicy} color={colors.fat} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
-            <SettingRow icon={Mail} label="Support" value="support@macr.app" onPress={handleSupport} color={colors.protein} />
+            <SettingRow icon={Mail} label="Support" value="support@apexailabs.dev" onPress={handleSupport} color={colors.protein} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <View style={{ paddingVertical: 14, paddingHorizontal: 4 }}>
               <Text style={{ fontSize: 13, color: colors.textSecondary }}>Macr v1.0.0 · Built with Nova8</Text>
