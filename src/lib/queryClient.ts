@@ -9,6 +9,8 @@
 // sign-out → sign-in with a different account on the same device).
 
 import { QueryClient } from '@tanstack/react-query';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,4 +19,9 @@ export const queryClient = new QueryClient({
       retry: 1,
     },
   },
+});
+
+export const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: 'macr-rq-cache',
 });

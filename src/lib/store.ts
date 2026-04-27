@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { queryClient } from './queryClient';
+import { queryClient, persister } from './queryClient';
 
 export type User = {
   id: string;
@@ -89,6 +89,8 @@ export const useAppStore = create<AppState>()(
         try { queryClient.clear(); } catch {}
         try { queryClient.removeQueries(); } catch {}
         try { queryClient.cancelQueries(); } catch {}
+        // Clear persisted cache on sign-out to prevent cross-account data leaks.
+        try { persister.removeClient(); } catch {}
       },
       setOnboarded: (value: boolean) => {
         set({ isOnboarded: value });

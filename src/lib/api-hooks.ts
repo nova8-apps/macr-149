@@ -1,3 +1,4 @@
+import { __nova8UploadIfLocal } from '@/lib/__nova8UploadIfLocal';
 // src/lib/api-hooks.ts — Wave 23.35 (single backend = Nova8 cloud)
 // ───────────────────────────────────────────────────────────────────
 // Why this file changed:
@@ -131,7 +132,7 @@ export function useMe() {
       };
     },
     enabled: !!token,
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -194,9 +195,10 @@ export function useSaveMeal() {
       // read `meal.totalCalories`) finds the value. Same for proteinG /
       // carbsG / fatG which are already in the agreed-on shape.
       const cal = Number((meal as any).totalCalories ?? (meal as any).calories ?? 0);
+      const storedPhotoUrl = await __nova8UploadIfLocal((meal as any).photoUrl ?? null, "photos");
       const created = await db.create('meals', {
         name: String((meal as any).name || 'Meal'),
-        photoUrl: (meal as any).photoUrl ?? null,
+        photoUrl: storedPhotoUrl,
         calories: cal,
         totalCalories: cal,
         proteinG: Number((meal as any).proteinG || 0),

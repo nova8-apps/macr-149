@@ -48,7 +48,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <Header title={me?.user?.name ? `Hi, ${me.user.name.split(' ')[0]}` : 'Today'} />
+      <Header name={me?.user?.name?.split(' ')[0]} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}
