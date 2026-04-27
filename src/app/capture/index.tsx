@@ -8,7 +8,7 @@ import { ArrowLeft, Camera, Image as ImageIcon, CheckCircle, RotateCcw, Zap, Zap
 import { colors } from '@/lib/theme';
 import { hapticMedium } from '@/lib/haptics';
 import { useAppStore } from '@/lib/store';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function CaptureScreen() {
