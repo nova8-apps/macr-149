@@ -12,6 +12,7 @@ export default function AnalyzingScreen() {
   const setPendingMeal = useAppStore(s => s.setPendingMeal);
   const { mutateAsync: analyzeImage, isPending } = useVisionAnalyze();
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const didRunRef = useRef<boolean>(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,12 +53,13 @@ export default function AnalyzingScreen() {
         console.error('[analyzing] vision error:', err);
         setError('Analysis failed — please try again');
       });
-  }, []);
+  }, [retryCount]);
 
   const retry = () => {
     setError(null);
     didRunRef.current = false;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setRetryCount(c => c + 1);
   };
 
   if (error) {

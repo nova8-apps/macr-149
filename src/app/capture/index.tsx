@@ -44,7 +44,8 @@ export default function CaptureScreen() {
         eatenAt: new Date().toISOString(),
       } as any);
 
-      router.push('/capture/analyzing');
+      router.replace('/capture/analyzing');
+      setIsCapturing(false);
     } catch (e) {
       console.error('[capture] camera error:', e);
       setIsCapturing(false);
@@ -97,7 +98,7 @@ export default function CaptureScreen() {
           fatG: 0,
           items: [],
         } as any);
-        router.push('/capture/analyzing');
+        router.replace('/capture/analyzing');
       }
     } catch (e) {
       console.error('[capture] library picker error:', e);
