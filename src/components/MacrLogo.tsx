@@ -34,7 +34,7 @@ export function MacrLogo({ size = 'md' }: MacrLogoProps) {
           marginTop: wordmarkMarginTop,
         }}
       >
-        Macr
+        MACR
       </Text>
     </View>
   );
