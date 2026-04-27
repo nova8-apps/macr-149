@@ -3,9 +3,10 @@ import { Slot } from 'expo-router';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import Purchases from 'react-native-purchases';
+import { configurePurchases } from '@/lib/purchases';
 
 // Wave 23.35.5 — use the SAME QueryClient singleton that api-hooks.ts
 // imperatively writes to. Previously _layout.tsx created its own client,
@@ -17,14 +18,12 @@ import { queryClient, persister } from '@/lib/queryClient';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  // Wave 23.13 — RevenueCat configuration (auto-generated).
+  // Wave 23.13 — RevenueCat configuration. Wave 23.65: route through the
+  // configurePurchases() wrapper in @/lib/purchases so log-level (WARN in
+  // prod, DEBUG in dev) and error handling are applied consistently.
   useEffect(() => {
     if (Platform.OS === 'ios') {
-      const k = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
-      if (k) {
-        try { Purchases.configure({ apiKey: k }); }
-        catch (e) { console.warn('[RC] configure failed', e); }
-      }
+      configurePurchases(process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY);
     }
   }, []);
 
@@ -47,4 +46,3 @@ export default function RootLayout() {
     </PersistQueryClientProvider>
   );
 }
-import { Platform } from 'react-native';

@@ -8,6 +8,9 @@ interface StreakPillProps {
 }
 
 export function StreakPill({ count }: StreakPillProps) {
+  // New users who have not yet logged a meal should see no pill.
+  if (count === 0) return null;
+
   return (
     <View style={{
       flexDirection: 'row',

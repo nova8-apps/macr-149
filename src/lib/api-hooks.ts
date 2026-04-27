@@ -132,11 +132,75 @@ export function useMe() {
       };
     },
     enabled: !!token,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 60 * 1000, // 15 minutes (goals/streak/entitlement change infrequently)
   });
 }
 
 // ─── Meals Hooks ───────────────────────────────────────────
+
+/**
+ * updateStreakOnSave — increments the streak when a meal is saved.
+ *
+ * Reads the current streak doc, computes whether today continues the streak,
+ * writes back to Firestore, and patches the ['me'] cache so the 🔥 pill updates
+ * instantly without waiting for the 15-minute staleTime.
+ */
+async function updateStreakOnSave(isoDay: string): Promise<void> {
+  const token = useAppStore.getState().sessionToken;
+  if (!token) return;
+
+  // 1. Read current streak doc (or treat as fresh start).
+  const streakDoc = await db.get('streaks', STREAK_DOC_ID).catch(() => null);
+  const existing = streakDoc?.data as any;
+  let lastLoggedDate = String(existing?.lastLoggedDate ?? '');
+  let currentStreak = Number(existing?.currentStreak ?? 0);
+  let longestStreak = Number(existing?.longestStreak ?? 0);
+
+  // 2. If already logged today, no-op.
+  if (lastLoggedDate === isoDay) return;
+
+  // 3. Compute "yesterday" in LOCAL time (not UTC).
+  const todayMs = localStartOfDayMs(isoDay);
+  const yesterdayMs = todayMs - 86400000; // 1 day back in local time
+  const yesterday = localDateKey(new Date(yesterdayMs));
+
+  // 4. Determine new streak.
+  let newCurrentStreak = 1;
+  if (lastLoggedDate === yesterday) {
+    // Logged yesterday → increment the streak.
+    newCurrentStreak = currentStreak + 1;
+  }
+  // Otherwise (missed a day or first ever log) → reset to 1.
+
+  const newLongestStreak = Math.max(longestStreak, newCurrentStreak);
+
+  // 5. Write back to Firestore.
+  const payload = {
+    currentStreak: newCurrentStreak,
+    longestStreak: newLongestStreak,
+    lastLoggedDate: isoDay,
+  };
+  if (!streakDoc) {
+    // First-time streak — create doc.
+    await db.create('streaks', payload, STREAK_DOC_ID);
+  } else {
+    // Update existing.
+    await db.update('streaks', STREAK_DOC_ID, payload);
+  }
+
+  // 6. Patch the ['me', token] cache so the 🔥 pill updates immediately.
+  queryClient.setQueryData(['me', token], (old: any) => {
+    if (!old) return old;
+    return {
+      ...old,
+      streak: {
+        currentStreak: newCurrentStreak,
+        longestStreak: newLongestStreak,
+        lastLoggedDate: isoDay,
+      },
+    };
+  });
+}
 
 export function useMealsByDate(date: string) {
   const token = useAppStore((s) => s.sessionToken);
@@ -151,11 +215,33 @@ export function useMealsByDate(date: string) {
         orderDir: 'desc',
         limit: 200,
       });
-      return docs
+      const meals = docs
         .filter((d) => Number((d.data as any).eatenAt) < end)
         .map((d) => ({ id: d.id, ...(d.data as any) })) as Meal[];
+
+      // Resolve any r2:... stable IDs to fresh 24-hour presigned URLs.
+      // This must happen INSIDE the queryFn so every execution (including
+      // cache restoration) produces fresh URLs rather than stale ones.
+      const storage = await import('@/nova8/backend/storage');
+      await Promise.all(
+        meals.map(async (m) => {
+          if (typeof m.photoUrl === 'string' && m.photoUrl.startsWith('r2:')) {
+            const id = m.photoUrl.slice(3); // strip 'r2:' prefix
+            try {
+              m.photoUrl = await storage.getUrl(id, { ttlSeconds: 86400 });
+            } catch {
+              // URL resolution failed — leave as undefined so the Flame icon fallback renders.
+              m.photoUrl = undefined;
+            }
+          }
+        })
+      );
+
+      return meals;
     },
     enabled: !!token,
+    staleTime: 60 * 1000, // 1 minute (per-day meal data changes when user logs)
+    gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days (restore from disk on cold start)
   });
 }
 
@@ -215,7 +301,7 @@ export function useSaveMeal() {
     // screen stuck on "No meals logged yet". Fix: manually splice the
     // new meal into every cached meals/stats query, then invalidate so
     // the next natural refetch reconciles with the server-side index.
-    onSuccess: (newMeal) => {
+    onSuccess: async (newMeal) => {
       const eatenAt = Number((newMeal as any).eatenAt) || Date.now();
       const isoDay = localDateKey(new Date(eatenAt));
       const token = useAppStore.getState().sessionToken;
@@ -279,6 +365,14 @@ export function useSaveMeal() {
         queryClient.invalidateQueries({ queryKey: ['stats-summary'], exact: false });
         queryClient.invalidateQueries({ queryKey: ['analytics-trends'], exact: false });
       }, 3500);
+
+      // 4) Update streak. Wrap in try/catch so a streak write failure never
+      //    blocks the meal save success path.
+      try {
+        await updateStreakOnSave(isoDay);
+      } catch (err: any) {
+        console.warn('[streak] Failed to update streak on meal save:', err?.message ?? err);
+      }
     },
   });
 }

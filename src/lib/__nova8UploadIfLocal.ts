@@ -12,8 +12,10 @@ export async function __nova8UploadIfLocal(
   folder: string = 'uploads',
 ): Promise<string | null> {
   if (!uri || typeof uri !== 'string') return null;
-  // Already remote — pass through.
+  // Already remote — pass through (backward compat for existing meals).
   if (/^https?:\/\//i.test(uri)) return uri;
+  // Already a stable R2 ID from a previous upload — pass through.
+  if (uri.startsWith('r2:')) return uri;
   // Local device URI shapes we handle: file:, content:, ph:,
   // assets-library:, plus React Native's "/var/.../tmp/..."
   // fallback when the platform omits the scheme.
@@ -28,8 +30,9 @@ export async function __nova8UploadIfLocal(
     const res = await fetch(uri);
     const blob = await res.blob();
     const meta = await storage.upload(blob, { folder });
-    const url = await storage.getUrl(meta.id, { ttlSeconds: 60 * 60 * 24 * 7 });
-    return url;
+    // Return the stable R2 ID prefixed with 'r2:' instead of an expiring URL.
+    // The queryFn in useMealsByDate will resolve fresh URLs at render time.
+    return `r2:${meta.id}`;
   } catch (e) {
     // If the upload fails we'd rather not block the DB write —
     // return null so the field round-trips as "no photo" instead

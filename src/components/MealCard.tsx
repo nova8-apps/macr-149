@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Image } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { Text } from '@/components/ui/text';
 import { Flame, Trash2 } from 'lucide-react-native';
@@ -48,9 +48,11 @@ export function MealCard({ meal, onPress, onDelete }: MealCardProps) {
         testID={`meal-card-${meal.id}`}
       >
         {meal.photoUrl ? (
-          <View style={{ width: 56, height: 56, borderRadius: 14, backgroundColor: colors.surfaceElevated, marginRight: 12, overflow: 'hidden' }}>
-            <Animated.Image source={{ uri: meal.photoUrl }} style={{ width: 56, height: 56 }} />
-          </View>
+          <Image
+            source={{ uri: meal.photoUrl }}
+            style={{ width: 56, height: 56, borderRadius: 14, marginRight: 12 }}
+            resizeMode="cover"
+          />
         ) : (
           <View style={{ width: 56, height: 56, borderRadius: 14, backgroundColor: colors.surfaceElevated, marginRight: 12, alignItems: 'center', justifyContent: 'center' }}>
             <Flame size={24} color={colors.primary} />

@@ -211,8 +211,17 @@ export default function ProgressScreen() {
             <Trophy size={24} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 24, fontWeight: '800', color: colors.primary }}>{streak.currentStreak} day streak</Text>
-            <Text style={{ fontSize: 13, color: colors.textSecondary }}>Longest: {streak.longestStreak} days</Text>
+            {streak.currentStreak > 0 ? (
+              <>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: colors.primary }}>{streak.currentStreak} day streak</Text>
+                <Text style={{ fontSize: 13, color: colors.textSecondary }}>Longest: {streak.longestStreak} days</Text>
+              </>
+            ) : (
+              <>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: colors.primary }}>Start your streak today</Text>
+                <Text style={{ fontSize: 13, color: colors.textSecondary }}>Log a meal to begin</Text>
+              </>
+            )}
           </View>
         </View>
 
