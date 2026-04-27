@@ -48,23 +48,23 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <Header name={me?.user?.name?.split(' ')[0]} />
-
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: 140 }}
         refreshControl={
           <RefreshControl refreshing={isFetching} onRefresh={() => refetch()} tintColor={colors.primary} />
         }
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+        <Header name={me?.user?.name?.split(' ')[0]} />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 20 }}>
           <DayStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} today={today} />
         </View>
 
-        <View style={{ alignItems: 'center', marginTop: 16 }}>
+        <View style={{ alignItems: 'center', marginTop: 16, paddingHorizontal: 20 }}>
           <StreakPill count={streakCount} />
         </View>
 
-        <View style={{ alignItems: 'center', marginTop: 20 }}>
+        <View style={{ alignItems: 'center', marginTop: 20, paddingHorizontal: 20 }}>
           <CalorieRing
             consumed={Math.round(totals.calories)}
             total={calorieGoal}
@@ -72,7 +72,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 24 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 24, paddingHorizontal: 20 }}>
           <MacroRing
             label="Protein"
             consumed={Math.round(totals.protein)}
@@ -96,7 +96,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={{ marginTop: 32 }}>
+        <View style={{ marginTop: 32, paddingHorizontal: 20 }}>
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>
             Meals
           </Text>

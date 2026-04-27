@@ -5,7 +5,7 @@
 // is already an http(s) URL, returns it unchanged. Null/empty
 // inputs return null so the caller can write `photoUrl: null`
 // without a separate guard.
-import { storage } from '@/nova8/backend/storage';
+import * as storage from '@/nova8/backend/storage';
 
 export async function __nova8UploadIfLocal(
   uri: string | null | undefined,

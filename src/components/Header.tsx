@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '@/lib/theme';
 
 export function Header({ name }: { name?: string }) {
   const hour = new Date().getHours();
@@ -24,20 +25,19 @@ export function Header({ name }: { name?: string }) {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: colors.bg,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    marginBottom: 8,
   },
   greeting: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   date: {
     fontSize: 14,
-    color: '#888',
+    color: colors.textSecondary,
   },
 });
