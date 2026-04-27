@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Macr",
-    "slug": "macr-app",
+    "slug": "macr",
     "scheme": "macrapp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -55,7 +55,10 @@
       "apiBaseUrl": "https://nova8.dev",
       "projectId": 149,
       "projectApiKey": "nv8pk_WzlqCANDB0SnXkoKucr6pZ8AcEiIaYlzYRzqC7ng624",
-      "privacyPolicyUrl": "https://nova8.dev/privacy/149"
+      "privacyPolicyUrl": "https://nova8.dev/privacy/149",
+      "eas": {
+        "projectId": "aa561d19-9ca3-40cb-8b4a-3ffe808bf482"
+      }
     },
     "runtimeVersion": {
       "policy": "fingerprint"
@@ -65,6 +68,7 @@
       "requestHeaders": {
         "expo-channel-name": "production"
       }
-    }
+    },
+    "owner": "nova8-dev"
   }
 }
