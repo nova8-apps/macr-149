@@ -174,6 +174,10 @@ export default function OnboardingStep6() {
               </View>
 
               <HealthCitationFootnote />
+
+              <Text style={{ fontSize: 11, lineHeight: 16, color: colors.textSecondary, marginTop: 10, textAlign: 'center' }}>
+                These targets are estimates based on the Mifflin-St Jeor equation. Consult a healthcare professional for personalized dietary advice.
+              </Text>
             </Animated.View>
           </ScrollView>
 

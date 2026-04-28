@@ -1,23 +1,7 @@
-# App Review Information
+4. **Scan results screen (capture/review)** — after scanning a meal photo, the nutritional breakdown (calories, protein, carbs, fat) is displayed. Directly below the macro summary card, a small footnote with an info icon reads "Nutritional estimates based on USDA FoodData Central" with a tappable link to https://fdc.nal.usda.gov/. This appears on every scan result.
 
-## Demo credentials
-- Email: review@example.com
-- Password: ReviewPass123!
+5. **Settings > Disclaimer section** — at the very bottom of the Settings screen, a static text block reads: "MACR provides nutritional estimates using AI image recognition. Calorie and macro values are approximate and may vary based on portion size, preparation method, and ingredients. This app is not a substitute for professional medical or dietary advice. Consult a healthcare provider before making significant changes to your diet."
 
-## Notes for reviewer
-- Sign in with the demo account to test the main flow
-- All features are unlocked for this account
+6. **Onboarding results screen — additional disclaimer** — below the existing equation citations on the onboarding results screen, a small note reads: "These targets are estimates based on the Mifflin-St Jeor equation. Consult a healthcare professional for personalized dietary advice."
 
-> Paste these credentials into App Store Connect → Your App → App Information → App Review Information → Sign-in Required.
-
-## Guideline 1.4.1 — Health Calculation Citations
-
-MACR displays calorie and macronutrient targets calculated using the Mifflin-St Jeor equation and published dietary guidelines. Citations to peer-reviewed and government sources are visible to users in three locations:
-
-1. **Onboarding results screen (Step 6)** — after completing the onboarding flow, users see their calculated daily targets. Below the macro cards, a small citation footnote credits the Mifflin-St Jeor equation (tappable link to PubMed PMID 2305711) and the dietary guidelines (tappable link to dietaryguidelines.gov).
-
-2. **Settings > Goals section** — directly below the Daily Targets and Log Weight rows, the same citation footnote appears so users can always reference the sources of their targets.
-
-3. **Settings > Info > Nutritional Disclaimer** — tapping this row opens a modal with a full disclaimer stating that the targets are estimates based on widely used equations and dietary guidelines, not a substitute for personalized professional advice. The modal body includes tappable links to both the PubMed citation (Mifflin et al., 1990) and the U.S. Dietary Guidelines for Americans.
-
-All citations are easy for users to find and link directly to authoritative sources.
+All citations and disclaimers are easy for users to find and link directly to authoritative sources.

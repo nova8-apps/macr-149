@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Pressable, Image, ScrollView } from 'react-native';
+import { View, Pressable, Image, ScrollView, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
-import { ArrowLeft, Check, AlertCircle } from 'lucide-react-native';
+import { ArrowLeft, Check, AlertCircle, Info } from 'lucide-react-native';
 import { colors } from '@/lib/theme';
 import { hapticMedium } from '@/lib/haptics';
 import { useAppStore } from '@/lib/store';
@@ -123,6 +123,24 @@ export default function ReviewScreen() {
               <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>FAT</Text>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{fatG || 0}g</Text>
             </View>
+          </View>
+        </View>
+
+        {/* USDA citation footnote */}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 10, gap: 5 }}>
+          <Info size={12} color={colors.textSecondary} style={{ marginTop: 1 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 11, color: colors.textSecondary, lineHeight: 16 }}>
+              {'Nutritional estimates based on '}
+            </Text>
+            <Pressable
+              onPress={() => Linking.openURL('https://fdc.nal.usda.gov/')}
+              accessibilityLabel="Open USDA FoodData Central"
+              accessibilityRole="link"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Text style={{ fontSize: 11, color: colors.primary, textDecorationLine: 'underline', lineHeight: 16 }}>USDA FoodData Central</Text>
+            </Pressable>
           </View>
         </View>
 

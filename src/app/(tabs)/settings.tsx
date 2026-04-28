@@ -108,7 +108,6 @@ export default function SettingsScreen() {
       router.replace('/auth/sign-in');
     } catch (err) {
       console.error('Logout error:', err);
-      // Even if server call fails, proceed with local sign-out
       queryClient.clear();
       signOut();
       router.replace('/auth/sign-in');
@@ -292,6 +291,14 @@ export default function SettingsScreen() {
               <Text style={{ fontSize: 13, color: colors.textSecondary }}>MACR v1.0.0 · Built with Nova8</Text>
             </View>
           </View>
+        </View>
+
+        {/* Health Disclaimer */}
+        <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 8 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.5, marginBottom: 10 }}>DISCLAIMER</Text>
+          <Text style={{ fontSize: 12, lineHeight: 18, color: colors.textSecondary }}>
+            MACR provides nutritional estimates using AI image recognition. Calorie and macro values are approximate and may vary based on portion size, preparation method, and ingredients. This app is not a substitute for professional medical or dietary advice. Consult a healthcare provider before making significant changes to your diet.
+          </Text>
         </View>
       </ScrollView>
 

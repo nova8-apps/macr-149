@@ -11,6 +11,7 @@ import { DayStrip } from '@/components/DayStrip';
 import { MealCard } from '@/components/MealCard';
 import { StreakPill } from '@/components/StreakPill';
 import { useMe, useMealsByDate, usePhotoUrlHydration } from '@/lib/api-hooks';
+import { useIsPro } from '@/hooks/useIsPro';
 import { colors } from '@/lib/theme';
 import { hapticMedium } from '@/lib/haptics';
 import { localDateKey } from '@/lib/date';
@@ -45,9 +46,11 @@ export default function HomeScreen() {
     );
   }, [meals]);
 
+  const { requirePro } = useIsPro();
+
   const handleAddMeal = () => {
     hapticMedium();
-    router.push('/capture');
+    requirePro(() => router.push('/capture'));
   };
 
   return (
