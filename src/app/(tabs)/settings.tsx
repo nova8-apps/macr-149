@@ -281,7 +281,7 @@ export default function SettingsScreen() {
             <SettingRow icon={Mail} label="Support" value="support@apexailabs.dev" onPress={handleSupport} color={colors.protein} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <View style={{ paddingVertical: 14, paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 13, color: colors.textSecondary }}>Macr v1.0.0 · Built with Nova8</Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary }}>MACR v1.0.0 · Built with Nova8</Text>
             </View>
           </View>
         </View>
