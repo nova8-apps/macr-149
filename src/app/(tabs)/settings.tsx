@@ -6,8 +6,10 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { useQueryClient } from '@tanstack/react-query';
 import { Text } from '@/components/ui/text';
-import { User, Target, Ruler, Bell, LogOut, Trash2, ChevronRight, Crown, Scale, Info, Shield, Mail } from 'lucide-react-native';
+import { Modal } from '@/components/ui/modal';
+import { User, Target, Ruler, Bell, LogOut, Trash2, ChevronRight, Crown, Scale, Info, Shield, Mail, AlertCircle, X } from 'lucide-react-native';
 import { PillButton } from '@/components/PillButton';
+import { HealthCitationFootnote } from '@/components/HealthCitationFootnote';
 import { useAppStore } from '@/lib/store';
 import { useMe, useGoalsMutation, useLogWeight } from '@/lib/api-hooks';
 import { logout } from '@/lib/apiClient';
@@ -63,6 +65,7 @@ export default function SettingsScreen() {
       ? String(goals?.currentWeightKg ?? 75)
       : String(Math.round((goals?.currentWeightKg ?? 75) * 2.20462))
   );
+  const [showDisclaimerModal, setShowDisclaimerModal] = useState<boolean>(false);
 
   // Reset weight input when goals change or units toggle
   useEffect(() => {
@@ -196,6 +199,9 @@ export default function SettingsScreen() {
               </>
             )}
           </View>
+          <View style={{ marginTop: 12 }}>
+            <HealthCitationFootnote />
+          </View>
         </View>
 
         {/* Weight Input */}
@@ -272,11 +278,13 @@ export default function SettingsScreen() {
 
         {/* About */}
         <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.5, marginBottom: 10 }}>ABOUT</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.5, marginBottom: 10 }}>INFO</Text>
           <View style={{ backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16 }}>
             <SettingRow icon={Shield} label="Privacy Policy" onPress={handlePrivacyPolicy} color={colors.fat} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <SettingRow icon={Info} label="Terms of Service" onPress={handlePrivacyPolicy} color={colors.fat} />
+            <View style={{ height: 1, backgroundColor: colors.border }} />
+            <SettingRow icon={AlertCircle} label="Nutritional Disclaimer" onPress={() => { hapticLight(); setShowDisclaimerModal(true); }} color={colors.carbs} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
             <SettingRow icon={Mail} label="Support" value="support@apexailabs.dev" onPress={handleSupport} color={colors.protein} />
             <View style={{ height: 1, backgroundColor: colors.border }} />
@@ -286,6 +294,36 @@ export default function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Nutritional Disclaimer Modal */}
+      <Modal isOpen={showDisclaimerModal} onClose={() => setShowDisclaimerModal(false)} size="md">
+        <View style={{ backgroundColor: colors.surface, borderRadius: 24, padding: 24, borderWidth: 1, borderColor: colors.border }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimary }}>Nutritional Disclaimer</Text>
+            <Pressable onPress={() => { hapticLight(); setShowDisclaimerModal(false); }} accessibilityLabel="Close disclaimer" testID="close-disclaimer" hitSlop={10}>
+              <X size={24} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <Text style={{ fontSize: 15, lineHeight: 22, color: colors.textPrimary }}>
+            Calorie and macronutrient targets shown in MACR are estimates based on widely used equations and dietary guidelines. They are not a substitute for personalised advice from a qualified nutrition professional.
+          </Text>
+          <Text style={{ fontSize: 15, lineHeight: 22, color: colors.textPrimary, marginTop: 12 }}>
+            Sources:{' '}
+            <Pressable onPress={() => Linking.openURL('https://pubmed.ncbi.nlm.nih.gov/2305711/')} accessibilityRole="link">
+              <Text style={{ fontSize: 15, color: colors.primary, textDecorationLine: 'underline' }}>
+                Mifflin et al. (1990), PubMed PMID 2305711
+              </Text>
+            </Pressable>
+            ;{' '}
+            <Pressable onPress={() => Linking.openURL('https://www.dietaryguidelines.gov')} accessibilityRole="link">
+              <Text style={{ fontSize: 15, color: colors.primary, textDecorationLine: 'underline' }}>
+                U.S. Dietary Guidelines for Americans, dietaryguidelines.gov
+              </Text>
+            </Pressable>
+            .
+          </Text>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

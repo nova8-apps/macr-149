@@ -7,6 +7,7 @@ import { Text } from '@/components/ui/text';
 import { ScrollView } from '@/components/ui/scroll-view';
 import { Sparkles, Flame, Beef, Wheat, Droplets, ChevronLeft } from 'lucide-react-native';
 import { PillButton } from '@/components/PillButton';
+import { HealthCitationFootnote } from '@/components/HealthCitationFootnote';
 import { useAppStore } from '@/lib/store';
 import { useGoalsMutation } from '@/lib/api-hooks';
 import { colors } from '@/lib/theme';
@@ -171,6 +172,8 @@ export default function OnboardingStep6() {
                   </View>
                 ))}
               </View>
+
+              <HealthCitationFootnote />
             </Animated.View>
           </ScrollView>
 
