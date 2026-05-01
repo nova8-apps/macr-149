@@ -2,43 +2,15 @@
   "expo": {
     "name": "MACR",
     "slug": "macr",
-    "scheme": "macrapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "scheme": "macr",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0a0a0a"
-    },
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.nova8.macrolens",
-      "appleTeamId": "YZP4MFJ47H",
-      "usesAppleSignIn": true,
-      "infoPlist": {
-        "NSCameraUsageDescription": "This app uses your camera to scan food items and barcodes for nutritional information.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to let you select food images for analysis.",
-        "ITSAppUsesNonExemptEncryption": false
-      },
-      "buildNumber": "1",
-      "privacyPolicyUrl": "https://nova8.dev/privacy/149",
-      "icon": "./assets/icon.png"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.nova8.macrolens",
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "bundler": "metro",
-      "favicon": "./assets/icon.png"
+      "backgroundColor": "#FFFAF5"
     },
     "plugins": [
       "expo-router",
@@ -58,32 +30,61 @@
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nova8.macrolens",
+      "appleTeamId": "YZP4MFJ47H",
+      "usesAppleSignIn": true,
+      "displayName": "MACR",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses your camera to scan food items and barcodes for nutritional information.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to let you select food images for analysis.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "1",
+      "privacyPolicyUrl": "https://nova8.dev/privacy/149",
+      "icon": "./assets/icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFAF5"
+      },
+      "package": "com.nova8.macrolens",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c57a5d4e-8ab7-44a7-9234-79b24ed95c8e"
+      },
+      "apiBaseUrl": "https://nova8.dev",
+      "projectId": 149,
+      "projectApiKey": "proj_9e4b3a2c1d0f5e6a7b8c9d0e1f2a3b4c",
+      "privacyPolicyUrl": "https://nova8.dev/privacy/149"
     },
     "platforms": [
       "ios",
       "android",
       "web"
     ],
-    "extra": {
-      "apiBaseUrl": "https://nova8.dev",
-      "projectId": 149,
-      "projectApiKey": "nv8pk_WzlqCANDB0SnXkoKucr6pZ8AcEiIaYlzYRzqC7ng624",
-      "privacyPolicyUrl": "https://nova8.dev/privacy/149",
-      "eas": {
-        "projectId": "aa561d19-9ca3-40cb-8b4a-3ffe808bf482"
-      }
-    },
     "runtimeVersion": {
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/aa561d19-9ca3-40cb-8b4a-3ffe808bf482",
+      "url": "https://u.expo.dev/5062a0f5-2dcf-4fb7-a267-1f88268e7e56",
       "requestHeaders": {
         "expo-channel-name": "production"
       }
-    },
-    "owner": "nova8-dev"
+    }
   }
 }
