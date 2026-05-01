@@ -14,7 +14,7 @@ export default function OnboardingStep3() {
   const [birthYear, setBirthYear] = useState<number>(1990);
   const [birthMonth, setBirthMonth] = useState<number>(6);
 
-  const years = Array.from({ length: 60 }, (_, i) => 2006 - i);
+  const years = Array.from({ length: 80 }, (_, i) => 2026 - i);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
